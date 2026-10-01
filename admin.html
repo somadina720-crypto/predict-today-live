@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin - Predict Today</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;font-family:'Segoe UI',sans-serif}
+body{background:#0a0a0a;color:#fff;padding:15px;max-width:600px;margin:auto}
+h2{color:#00ff66;text-align:center;margin:10px 0}
+.card{background:#151515;padding:14px;border-radius:12px;margin-bottom:12px;border:1px solid #222}
+label{font-size:12px;color:#888;display:block;margin-top:8px}
+input{width:100%;padding:12px;margin:6px 0;background:#000;border:1px solid #333;color:#fff;border-radius:8px}
+.row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+button{width:100%;padding:14px;font-weight:900;border:none;border-radius:10px;margin-top:10px;cursor:pointer}
+.btn-green{background:#00ff66;color:#000}
+.btn-red{background:#ff0033;color:#fff}
+.btn-wa{background:#25D366;color:#fff}
+.status{margin-top:15px;text-align:center;font-weight:800;padding:10px;border-radius:8px}
+</style>
+</head>
+<body>
+<h2>⚙️ Predict Today Admin</h2>
+
+<div class="card">
+<label>Booking Code (e.g 83AKK92)</label>
+<input id="code" placeholder="Enter booking code">
+<label>Bet Link</label>
+<input id="betlink" value="https://www.sportybet.com/ng/">
+<label>WhatsApp Channel Link</label>
+<input id="walink" value="https://whatsapp.com/channel/0029VbDaWqJ2f3EGNIgRsC1r">
+<label>Telegram Channel Link</label>
+<input id="tglink" value="https://t.me/yourchannel">
+<button class="btn-green" onclick="saveSettings()">💾 Save Links & Code</button>
+</div>
+
+<div id="games"></div>
+<button class="btn-wa" onclick="addGame()">+ Add Game</button>
+<button class="btn-red" onclick="publish()">🚀 PUBLISH 8 GAMES TO LIVE SITE</button>
+<div id="status" class="status"></div>
+
+<script>
+const SUPABASE_URL = "https://qsusnekkdlygkebedupb.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_zrTE8rC6xJN7vt9qw_phTA_BqKC3EQW";
+const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let gameCount = 0;
+
+function addGame(data={}){
+ if(gameCount>=8){alert("Max 8 games only");return;}
+ const div=document.createElement('div');div.className='card';
+ div.innerHTML=`<label>Game ${gameCount+1}</label><div class="row">
+ <input placeholder="Home" class="home" value="${data.home||''}">
+ <input placeholder="Away" class="away" value="${data.away||''}">
+ <input placeholder="Tip e.g Over 1.5" class="tip" value="${data.tip||''}"></div>
+ <input placeholder="League e.g Premier League" class="league" value="${data.league||''}">`;
+ document.getElementById('games').appendChild(div);gameCount++;
+}
+
+async function saveSettings(){
+ const payload={
+  booking_code: document.getElementById('code').value,
+  bet_link: document.getElementById('betlink').value,
+  whatsapp_link: document.getElementById('walink').value,
+  telegram_link: document.getElementById('tglink').value
+ };
+ if(!payload.booking_code){alert("Enter booking code");return;}
+ const {data} = await supa.from('settings').select('id').limit(1);
+ if(data && data.length>0){ await supa.from('settings').update(payload).eq('id',data[0].id); }
+ else { await supa.from('settings').insert(payload); }
+ document.getElementById('status').innerText="✅ Settings saved! WhatsApp & Telegram updated";
+ document.getElementById('status').style.background="#00ff66"; document.getElementById('status').style.color="#000";
+}
+
+async function publish(){
+ const cards=document.querySelectorAll('#games.card');
+ let games=[];
+ cards.forEach(c=>{
+  const h=c.querySelector('.home'); if(!h) return;
+  games.push({home:c.querySelector('.home').value, away:c.querySelector('.away').value, tip:c.querySelector('.tip').value, league:c.querySelector('.league').value});
+ });
+ if(games.length!==8){alert("Add exactly 8 games. You have "+games.length);return;}
+ const code=document.getElementById('code').value;
+ if(!code){alert("Enter booking code first");return;}
+ const {error}=await supa.from('predictions').insert({games:games, booking_code:code});
+ if(error){document.getElementById('status').innerText="❌ "+error.message; document.getElementById('status').style.background="#ff0033";}
+ else {document.getElementById('status').innerText="🚀 SUCCESS! 8 Games published to live site!"; document.getElementById('status').style.background="#00ff66"; document.getElementById('status').style.color="#000";}
+}
+
+// auto load 8 empty slots
+for(let i=0;i<8;i++) addGame();
+</script>
+</body>
+  </html>
