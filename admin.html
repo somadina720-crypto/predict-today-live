@@ -12,31 +12,27 @@ h2{color:#00ff66;text-align:center}
 .card{background:#151515;padding:14px;border-radius:12px;margin-bottom:12px;border:1px solid #222}
 label{font-size:13px;color:#aaa;display:block;margin:5px 0}
 input{width:100%;padding:13px;margin:6px 0;background:#000;border:1px solid #333;color:#fff;border-radius:8px}
-input:disabled{background:#1a1a1a;color:#888;border:1px dashed #333}
 .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 button{width:100%;padding:15px;font-weight:900;border:none;border-radius:10px;margin-top:10px;cursor:pointer;font-size:15px}
-.btn-green{background:#00ff66;color:#000}
-.btn-red{background:#ff0033;color:#fff}
-.btn-orange{background:#ff8800;color:#000}
 .btn-grey{background:#222;color:#fff;border:1px solid #333}
+.btn-orange{background:#ff8800;color:#000}
+.btn-red{background:#ff0033;color:#fff}
 .status{margin-top:15px;text-align:center;font-weight:800;padding:12px;border-radius:8px;display:none}
 #preview{width:100%;max-height:350px;object-fit:contain;border-radius:10px;display:none;margin-top:10px;border:1px solid #333}
-small{color:#777}
-.tipInput{border:1px solid #00ff66!important;background:#001a00!important;color:#00ff66!important;font-weight:900}
 </style>
 </head>
 <body>
 <h2>⚙️ SUPER ADMIN</h2>
 
 <div class="card">
-<label>📸 STEP 1: Upload Screenshot of your 8 games</label>
+<label>📸 Upload Screenshot of your 8 games</label>
 <input type="file" id="screenshot" accept="image/*">
 <img id="preview"/>
 <small id="ocrStatus" style="color:#00ff66;font-weight:700"></small>
 </div>
 
 <div class="card">
-<label>🎫 Booking Code (auto-detected)</label>
+<label>🎫 Booking Code</label>
 <input id="code" placeholder="e.g T2VAKQ">
 </div>
 
@@ -53,19 +49,17 @@ const SUPABASE_ANON_KEY="sb_publishable_zrTE8rC6xJN7vt9qw_phTA_BqKC3EQW";
 const supa=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 let gameCount=0;
 
-function addGame(d={home:'',away:'',tip:'',league:'', locked:false}){
+function addGame(d={home:'',away:'',tip:'',league:''}){
  if(gameCount>=8) return;
  gameCount++;
  const div=document.createElement('div');div.className='card';
- const disabled = d.locked? 'disabled' : '';
- const tipClass = d.locked? 'tip tipInput' : 'tip';
- div.innerHTML=`<label>Game ${gameCount} ${d.locked? '🔒 Locked teams - Only edit TIP' : ''}</label>
+ div.innerHTML=`<label>Game ${gameCount}</label>
  <div class="row">
- <input placeholder="Home" class="home" value="${d.home}" ${disabled}>
- <input placeholder="Away" class="away" value="${d.away}" ${disabled}>
- <input placeholder="TIP ONLY - You can edit" class="${tipClass}" value="${d.tip}">
+ <input placeholder="Home team" class="home" value="${d.home}">
+ <input placeholder="Away team" class="away" value="${d.away}">
+ <input placeholder="Tip - you can edit" class="tip" value="${d.tip}">
  </div>
- <input placeholder="League" class="league" value="${d.league}" ${disabled}>`;
+ <input placeholder="League" class="league" value="${d.league}">`;
  document.getElementById('games').appendChild(div);
 }
 function clearAllFields(){
@@ -78,59 +72,19 @@ for(let i=0;i<8;i++) addGame();
 document.getElementById('screenshot').addEventListener('change', async (e)=>{
  const file=e.target.files[0]; if(!file) return;
  const img=document.getElementById('preview'); img.src=URL.createObjectURL(file); img.style.display='block';
- document.getElementById('ocrStatus').innerText='⏳ Reading teams + tips... wait 15 sec...';
+ document.getElementById('ocrStatus').innerText='⏳ Reading teams + tips... wait...';
  try{
   const {data:{text}} = await Tesseract.recognize(file,'eng');
-  console.log(text);
-  // FIND BOOKING CODE - like T2VAKQ, 6-7 chars capital
   let codeMatch = text.match(/\b[A-Z0-9]{5,8}\b/);
   if(codeMatch) document.getElementById('code').value = codeMatch[0];
-
-  // NEW PARSER - extract lines that look like "Azerbaijan vs Liechtenstein" or contain tips
-  let lines = text.split('\n').map(s=>s.trim()).filter(s=>s.length>2);
-  let gamesFound = [];
-
-  // Look for vs, -, or known teams
-  for(let i=0;i<lines.length;i++){
-    let line = lines[i];
-    if(/vs|v\s|@/.test(line.toLowerCase()) && line.length < 60){
-       let parts = line.split(/vs|v\s|@| - /i);
-       if(parts.length>=2){
-         let home = parts[0].replace(/[^a-zA-Z ]/g,'').trim().substring(0,20);
-         let away = parts[1].replace(/[^a-zA-Z ]/g,'').trim().substring(0,20);
-         // Next lines might have tip like 1, X, 2, Over, GG etc
-         let tip = '';
-         for(let j=i+1;j<Math.min(i+4, lines.length);j++){
-            if(/^(1|X|2|GG|NG|Over|Under|1X|X2|12)/i.test(lines[j])){ tip=lines[j].substring(0,15); break; }
-         }
-         if(home && away) gamesFound.push({home, away, tip: tip || '1', league:'International'});
-       }
-    }
-  }
-
-  // Fallback: if not found 8, use generic split
-  if(gamesFound.length < 4){
-    gamesFound = [];
-    let possible = lines.filter(l=> l.split(' ').length>=2 && l.length<40 &&!/odd|stake|sporty|total/i.test(l));
-    for(let k=0;k<Math.min(8, possible.length);k++){
-      gamesFound.push({home: possible[k].split(' ')[0] || 'Home', away: possible[k].split(' ')[1] || 'Away', tip: '1', league:''});
-    }
-  }
-
-  document.getElementById('games').innerHTML=''; gameCount=0;
-  gamesFound.slice(0,8).forEach(g=>{
-    addGame({home:g.home, away:g.away, tip:g.tip, league:g.league, locked:true});
-  });
-  while(gameCount<8) addGame({home:'',away:'',tip:'',league:'', locked:false});
-
-  document.getElementById('ocrStatus').innerText='✅ Read done! Teams are locked. ONLY edit the green TIP box if wrong.';
+  document.getElementById('ocrStatus').innerText='✅ Read done! You can edit anything before publishing.';
  }catch(err){
-  document.getElementById('ocrStatus').innerText='❌ Could not read well, type manually but tips only editable.';
+  document.getElementById('ocrStatus').innerText='❌ Could not read, type manually.';
  }
 });
 
 async function deletePrevious(){
- if(!confirm("Delete all old games from users site?")) return;
+ if(!confirm("Delete all old games?")) return;
  document.getElementById('status').style.display='block';
  document.getElementById('status').innerText='⏳ Deleting...';
  document.getElementById('status').style.background='#333';
@@ -146,10 +100,8 @@ async function deletePrevious(){
 }
 
 async function publish(){
- const cards=document.querySelectorAll('#games.card');
+ let gameCards = document.querySelectorAll('#games.card');
  let games=[];
- // Skip first 2 cards (upload + code)
- let gameCards = Array.from(document.querySelectorAll('#games.card'));
  gameCards.forEach(c=>{
    let h=c.querySelector('.home'), a=c.querySelector('.away'), t=c.querySelector('.tip'), l=c.querySelector('.league');
    if(h && a && t) games.push({home:h.value, away:a.value, tip:t.value, league:l.value});
@@ -167,7 +119,7 @@ async function publish(){
   document.getElementById('status').innerText='❌ '+error.message;
   document.getElementById('status').style.background='#ff0033';
  } else {
-  document.getElementById('status').innerText='✅ SUCCESS! Live now!';
+  document.getElementById('status').innerText='✅ SUCCESS! 8 games LIVE now!';
   document.getElementById('status').style.background='#00ff66';
   document.getElementById('status').style.color='#000';
  }
