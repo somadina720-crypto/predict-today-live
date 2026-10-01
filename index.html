@@ -6,58 +6,70 @@
 <title>Predict Today - Let's Win Together</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',system-ui,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',sans-serif}
 body{background:#0a0a0a;color:#fff}
-.top-lights{display:flex;justify-content:center;gap:18px;padding:14px 0;background:#000;border-bottom:2px solid #222}
+.top-lights{display:flex;justify-content:center;gap:18px;padding:14px;background:#000;border-bottom:2px solid #222}
 .light{width:22px;height:22px;border-radius:50%;animation:blink 1.2s infinite}
-.light.white{background:#fff;box-shadow:0 0 15px #fff}
-.light.green{background:#00ff66;box-shadow:0 0 15px #00ff66;animation-delay:0.4s}
-.light.red{background:#ff0033;box-shadow:0 0 15px #ff0033;animation-delay:0.8s}
+.white{background:#fff;box-shadow:0 0 15px #fff}
+.green{background:#00ff66;box-shadow:0 0 15px #00ff66;animation-delay:0.4s}
+.red{background:#ff0033;box-shadow:0 0 15px #ff0033;animation-delay:0.8s}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
-.header{text-align:center;padding:22px 15px 10px}
-.sub{margin-top:6px;color:#00ff66;font-weight:600}
-.ticker{background:#ffcc00;color:#000;font-weight:800;white-space:nowrap;overflow:hidden;padding:8px 0}
-.ticker-track{display:inline-block;animation:scroll 18s linear infinite;padding-left:100%}
-@keyframes scroll{0%{transform:translateX(0)}100%{transform:translateX(-100%)}}
-.container{max-width:480px;margin:0 auto;padding:14px}
+.header{text-align:center;padding:22px 15px}
+.sub{color:#00ff66;font-weight:700;margin-top:6px}
+.ticker{background:#ffcc00;color:#000;font-weight:800;padding:8px;overflow:hidden;white-space:nowrap}
+.container{max-width:480px;margin:auto;padding:14px}
 .card{background:#151515;border:1px solid #2a2a2a;border-radius:16px;overflow:hidden;margin-top:14px}
-.card-head{display:flex;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #222}
+.head{display:flex;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #222}
 .badge{background:#00ff66;color:#000;font-size:11px;font-weight:900;padding:4px 10px;border-radius:20px}
 .game{display:flex;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #1f1f1f}
-.g-tip{background:#00ff66;color:#000;font-weight:900;font-size:12px;padding:6px 12px;border-radius:8px}
-.code-section{padding:16px;text-align:center;background:#0f0f0f}
-.code-box{background:#000;border:1.5px dashed #333;font-size:22px;font-weight:900;padding:14px;border-radius:10px;user-select:none}
-.bet-btn{width:100%;background:#ff0033;color:#fff;border:none;padding:16px;font-weight:900;border-radius:12px;margin-top:14px}
-.community{margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.comm-btn{display:flex;justify-content:center;padding:14px;border-radius:12px;font-weight:800;text-decoration:none;color:#fff}
+.tip{background:#00ff66;color:#000;font-weight:900;font-size:12px;padding:6px 12px;border-radius:8px}
+.code-area{padding:16px;text-align:center;background:#0f0f0f}
+.code-box{background:#000;border:1.5px dashed #333;font-size:22px;font-weight:900;padding:14px;border-radius:10px;margin-top:8px}
+.bet-btn{width:100%;background:#ff0033;color:#fff;border:none;padding:16px;font-weight:900;border-radius:12px;margin-top:14px;font-size:16px}
+.comm{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.comm a{display:flex;justify-content:center;padding:14px;border-radius:12px;font-weight:800;text-decoration:none;color:#fff}
 .wa{background:#25D366}.tg{background:#229ED9}
 </style>
 </head>
 <body>
 <div class="top-lights"><div class="light white"></div><div class="light green"></div><div class="light red"></div></div>
 <div class="header"><h1>Welcome to <span style="color:#00ff66">Predict</span> <span style="color:#ff0033">Today</span></h1><p class="sub">let's win together 💪</p></div>
-<div class="ticker"><div class="ticker-track">⚠️ 18+ BET RESPONSIBLY ⚠️ 18+ BET RESPONSIBLY ⚠️ 18+ BET RESPONSIBLY ⚠️</div></div>
+<div class="ticker">⚠️ 18+ BET RESPONSIBLY ⚠️ 18+ BET RESPONSIBLY ⚠️ 18+ BET RESPONSIBLY ⚠️</div>
 <div class="container">
-<div class="card"><div class="card-head"><h3 id="cardDate">Loading...</h3><span class="badge">8 GAMES</span></div>
-<div id="gamesList"></div>
-<div class="code-section"><div style="font-size:12px;color:#aaa;margin-bottom:8px">BOOKING CODE</div><div class="code-box" id="bookingCode">------</div><button class="bet-btn" onclick="handleBet()">🔥 BET NOW - COPY & WIN</button></div>
+<div class="card"><div class="head"><h3 id="date">Today's Games</h3><span class="badge">8 GAMES</span></div>
+<div id="games"><div style="padding:30px;text-align:center;color:#666">Loading...</div></div>
+<div class="code-area"><div style="font-size:12px;color:#aaa">BOOKING CODE</div><div class="code-box" id="code">------</div><button class="bet-btn" onclick="betNow()">🔥 BET NOW - COPY & WIN</button></div>
 </div>
-<div class="community"><a id="waLink" class="comm-btn wa" href="#">WhatsApp</a><a id="tgLink" class="comm-btn tg" href="#">Telegram</a></div>
+<div class="comm">
+<a class="wa" href="https://whatsapp.com/channel/0029VbDaWqJ2f3EGNIgRsC1r" target="_blank">WhatsApp Channel</a>
+<a class="tg" href="https://t.me/yourchannel" target="_blank">Telegram Channel</a>
+</div>
 </div>
 <script>
 const SUPABASE_URL = "https://qsusnekkdlygkebedupb.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_zrTE8rC6xJN7vt9qw_phTA_BqKC3EQW";
 const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-let currentCode=""; let betLink="https://www.sportybet.com/ng/";
-async function loadData(){
- const {data:settings}=await supa.from('settings').select('*').limit(1).single();
- if(settings){currentCode=settings.booking_code;document.getElementById('bookingCode').innerText=currentCode;betLink=settings.bet_link||betLink; if(settings.whatsapp_link) document.getElementById('waLink').href=settings.whatsapp_link; if(settings.telegram_link) document.getElementById('tgLink').href=settings.telegram_link;}
- const {data:preds}=await supa.from('predictions').select('*').order('created_at',{ascending:false}).limit(1);
- if(preds&&preds.length>0){let games=preds[0].games; if(typeof games==='string') games=JSON.parse(games); document.getElementById('cardDate').innerText=new Date(preds[0].created_at).toLocaleDateString(); if(preds[0].booking_code){currentCode=preds[0].booking_code; document.getElementById('bookingCode').innerText=currentCode;} renderGames(games);}
+let currentCode = ""; let betLink = "https://www.sportybet.com/ng/";
+async function load(){
+ try{
+  const {data:s} = await supa.from('settings').select('*').limit(1).single();
+  if(s){ currentCode=s.booking_code||""; betLink=s.bet_link||betLink; if(currentCode) document.getElementById('code').innerText=currentCode; }
+  const {data:p} = await supa.from('predictions').select('*').order('created_at',{ascending:false}).limit(1);
+  if(p && p.length>0){
+   let games=p[0].games; if(typeof games==='string') games=JSON.parse(games);
+   currentCode=p[0].booking_code||currentCode; document.getElementById('code').innerText=currentCode;
+   document.getElementById('date').innerText=new Date(p[0].created_at).toLocaleDateString();
+   document.getElementById('games').innerHTML="";
+   games.slice(0,8).forEach(g=>{
+    document.getElementById('games').innerHTML+=`<div class="game"><div><div style="font-weight:700">${g.home} vs ${g.away}</div><div style="font-size:11px;color:#888">${g.league||''}</div></div><div class="tip">${g.tip||''}</div></div>`;
+   });
+  } else {
+   document.getElementById('games').innerHTML="<div style='padding:20px;text-align:center'>No games yet. Go to admin.html to add 8 games</div>";
+  }
+ }catch(e){console.log(e)}
 }
-function renderGames(games){const list=document.getElementById('gamesList');list.innerHTML="";games.slice(0,8).forEach(g=>{list.innerHTML+=`<div class="game"><div><div style="font-weight:700">${g.home} vs ${g.away}</div><div style="font-size:11px;color:#888">${g.league||''}</div></div><div class="g-tip">${g.tip||''}</div></div>`;});}
-function handleBet(){navigator.clipboard.writeText(currentCode).then(()=>{window.open(betLink,"_blank");});}
-loadData();
+function betNow(){ if(!currentCode||currentCode==="------"){alert("No code yet");return;} navigator.clipboard.writeText(currentCode); alert("Code "+currentCode+" copied!"); window.open(betLink,"_blank"); }
+load();
 </script>
 </body>
-  </html>
+                                                                                 </html>
