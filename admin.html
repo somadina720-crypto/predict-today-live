@@ -1,78 +1,140 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin - Predict Today</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Super Admin - Predict Today</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 <style>
 *{box-sizing:border-box;font-family:'Segoe UI',sans-serif}
-body{background:#0a0a0a;color:#fff;padding:15px;max-width:600px;margin:auto}
-h2{color:#00ff66;text-align:center;margin:15px 0}
+body{background:#0a0a0a;color:#fff;padding:15px;max-width:650px;margin:auto}
+h2{color:#00ff66;text-align:center}
 .card{background:#151515;padding:14px;border-radius:12px;margin-bottom:12px;border:1px solid #222}
-label{font-size:13px;color:#aaa;display:block;margin:4px 0}
+label{font-size:13px;color:#aaa;display:block;margin:5px 0}
 input{width:100%;padding:13px;margin:6px 0;background:#000;border:1px solid #333;color:#fff;border-radius:8px}
 .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-button{width:100%;padding:15px;font-weight:900;border:none;border-radius:10px;margin-top:10px;cursor:pointer}
+button{width:100%;padding:15px;font-weight:900;border:none;border-radius:10px;margin-top:10px;cursor:pointer;font-size:15px}
 .btn-green{background:#00ff66;color:#000}
-.btn-red{background:#ff0033;color:#fff;margin-top:20px;font-size:16px}
+.btn-red{background:#ff0033;color:#fff}
+.btn-orange{background:#ff8800;color:#000}
+.btn-grey{background:#222;color:#fff;border:1px solid #333}
 .status{margin-top:15px;text-align:center;font-weight:800;padding:12px;border-radius:8px;display:none}
+#preview{width:100%;max-height:300px;object-fit:contain;border-radius:10px;display:none;margin-top:10px;border:1px solid #333}
+small{color:#777}
 </style>
 </head>
 <body>
-<h2>⚙️ Predict Today Admin</h2>
+<h2>⚙️ SUPER ADMIN</h2>
 
 <div class="card">
-<label>Booking Code (e.g 83AKK92) - This one go show for main site</label>
-<input id="code" placeholder="Enter booking code e.g 83AKK92">
+<label>📸 STEP 1: Upload Screenshot of your 8 games (SportyBet slip)</label>
+<input type="file" id="screenshot" accept="image/*">
+<img id="preview"/>
+<small id="ocrStatus"></small>
+</div>
+
+<div class="card">
+<label>🎫 Booking Code</label>
+<input id="code" placeholder="e.g 83AKK92">
 </div>
 
 <div id="games"></div>
 
+<button class="btn-grey" onclick="clearAllFields()">🧹 Clear Form</button>
+<button class="btn-orange" onclick="deletePrevious()">🗑️ DELETE PREVIOUS PUBLISH (Clear Users Site)</button>
 <button class="btn-red" onclick="publish()">🚀 PUBLISH 8 GAMES TO LIVE SITE</button>
 <div id="status" class="status"></div>
 
 <script>
-const SUPABASE_URL = "https://qsusnekkdlygkebedupb.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_zrTE8rC6xJN7vt9qw_phTA_BqKC3EQW";
-const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-let gameCount = 0;
+const SUPABASE_URL="https://qsusnekkdlygkebedupb.supabase.co";
+const SUPABASE_ANON_KEY="sb_publishable_zrTE8rC6xJN7vt9qw_phTA_BqKC3EQW";
+const supa=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let gameCount=0;
 
-function addGame(){
- if(gameCount>=8){alert("Max 8 games");return;}
+function addGame(d={home:'',away:'',tip:'',league:''}){
+ if(gameCount>=8) return;
  gameCount++;
  const div=document.createElement('div');div.className='card';
  div.innerHTML=`<label>Game ${gameCount}</label><div class="row">
- <input placeholder="Home" class="home">
- <input placeholder="Away" class="away">
- <input placeholder="Tip e.g Over 1.5" class="tip"></div>
- <input placeholder="League e.g Premier League" class="league">`;
+ <input placeholder="Home" class="home" value="${d.home}">
+ <input placeholder="Away" class="away" value="${d.away}">
+ <input placeholder="Tip e.g Over 1.5" class="tip" value="${d.tip}"></div>
+ <input placeholder="League e.g Premier League" class="league" value="${d.league}">`;
  document.getElementById('games').appendChild(div);
 }
+function clearAllFields(){
+ document.getElementById('games').innerHTML='';gameCount=0;
+ for(let i=0;i<8;i++) addGame();
+ document.getElementById('code').value='';
+}
+for(let i=0;i<8;i++) addGame();
 
-async function publish(){
- const cards=document.querySelectorAll('#games .card');
- let games=[];
- cards.forEach(c=>{games.push({home:c.querySelector('.home').value, away:c.querySelector('.away').value, tip:c.querySelector('.tip').value, league:c.querySelector('.league').value});});
- const code=document.getElementById('code').value;
- if(!code){alert("Enter booking code first");return;}
- if(games.length!==8){alert("Add 8 games - you have "+games.length);return;}
- for(let g of games){if(!g.home||!g.away||!g.tip){alert("Fill all games complete");return;}}
+document.getElementById('screenshot').addEventListener('change', async (e)=>{
+ const file=e.target.files[0]; if(!file) return;
+ const img=document.getElementById('preview'); img.src=URL.createObjectURL(file); img.style.display='block';
+ document.getElementById('ocrStatus').innerText='⏳ Reading screenshot... please wait 10 seconds...';
+ try{
+  const {data:{text}} = await Tesseract.recognize(file,'eng');
+  document.getElementById('ocrStatus').innerText='✅ Read done! Check games below, edit if needed.';
+  // Simple auto-parse: try to split lines containing "vs" or "-"
+  let lines=text.split('\n').filter(l=>l.trim().length>4);
+  let idx=0;
+  document.getElementById('games').innerHTML=''; gameCount=0;
+  lines.slice(0,8).forEach(line=>{
+    // Very basic parser - you can edit after
+    let home='',away='',tip=line;
+    if(line.includes('vs')){let p=line.split('vs');home=p[0];away=p[1];}
+    addGame({home:home.substring(0,20),away:away.substring(0,20),tip:tip.substring(0,25),league:''});
+    idx++;
+  });
+  while(gameCount<8) addGame();
+  // Try find booking code in text
+  let codeMatch=text.match(/[A-Z0-9]{6,8}/);
+  if(codeMatch) document.getElementById('code').value=codeMatch[0];
+ }catch(err){
+  document.getElementById('ocrStatus').innerText='❌ Could not read, please type manually.';
+ }
+});
+
+async function deletePrevious(){
+ if(!confirm("Are you sure? This will REMOVE all old games from users site!")) return;
  document.getElementById('status').style.display='block';
- document.getElementById('status').innerText="⏳ Publishing...";
- document.getElementById('status').style.background="#333";
- const {error}=await supa.from('predictions').insert({games:games, booking_code:code});
+ document.getElementById('status').innerText='⏳ Deleting previous games...';
+ document.getElementById('status').style.background='#333';
+ const {error} = await supa.from('predictions').delete().neq('id',0);
  if(error){
-  document.getElementById('status').innerText="❌ "+error.message;
-  document.getElementById('status').style.background="#ff0033";
+  document.getElementById('status').innerText='❌ '+error.message;
+  document.getElementById('status').style.background='#ff0033';
  } else {
-  document.getElementById('status').innerText="✅ SUCCESS! 8 Games live now! Go check main site.";
-  document.getElementById('status').style.background="#00ff66";
-  document.getElementById('status').style.color="#000";
+  document.getElementById('status').innerText='✅ Previous games DELETED! Users site now shows "No tips yet" until you publish new one.';
+  document.getElementById('status').style.background='#ff8800';
+  document.getElementById('status').style.color='#000';
  }
 }
 
-for(let i=0;i<8;i++) addGame();
+async function publish(){
+ const cards=document.querySelectorAll('#games.card');
+ let games=[];
+ cards.forEach(c=>{games.push({home:c.querySelector('.home').value, away:c.querySelector('.away').value, tip:c.querySelector('.tip').value, league:c.querySelector('.league').value});});
+ const code=document.getElementById('code').value;
+ if(!code){alert("Enter booking code");return;}
+ if(games.length!==8){alert("Need 8 games");return;}
+ for(let g of games){if(!g.home||!g.away||!g.tip){alert("Fill all games");return;}}
+ document.getElementById('status').style.display='block';
+ document.getElementById('status').innerText='⏳ Publishing...';
+ document.getElementById('status').style.background='#333';
+ // First delete old, then insert new - so users always see TODAY
+ await supa.from('predictions').delete().neq('id',0);
+ const {error}=await supa.from('predictions').insert({games:games, booking_code:code});
+ if(error){
+  document.getElementById('status').innerText='❌ '+error.message;
+  document.getElementById('status').style.background='#ff0033';
+ } else {
+  document.getElementById('status').innerText='✅ SUCCESS! New games are LIVE! Users will see new updates when they click.';
+  document.getElementById('status').style.background='#00ff66';
+  document.getElementById('status').style.color='#000';
+ }
+}
 </script>
 </body>
 </html>
