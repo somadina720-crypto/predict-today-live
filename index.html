@@ -1,89 +1,68 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Predict Today - Let's win together</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Predict Today</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-*{box-sizing:border-box;font-family:'Segoe UI',sans-serif;margin:0;padding:0}
-body{background:#050505;color:#fff;padding:12px;-webkit-tap-highlight-color:transparent}
-.header{text-align:center;padding:22px 0 10px}
-.header h1{font-size:32px;font-weight:900;color:#ffffff !important}
-.header h1 span{color:#ffffff !important}
-.header p{color:#ffffff !important;font-weight:700;margin-top:5px;font-size:16px}
-.banner{background:#ffcc00;color:#000;text-align:center;padding:8px;font-weight:900;font-size:13px;margin:12px 0;border-radius:6px}
-.card{background:#121212;border:1px solid #222;border-radius:14px;padding:15px;margin-top:10px}
-.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.badge{background:#00ff66;color:#000;padding:4px 12px;border-radius:20px;font-weight:900;font-size:12px}
-.empty{text-align:center;padding:25px;color:#aaa;font-size:15px}
-.code-box{
- background:#000;border:1px dashed #444;text-align:center;padding:16px;border-radius:10px;margin:15px 0;
- font-size:23px;font-weight:900;letter-spacing:2px;color:#fff;
- -webkit-user-select:none; -moz-user-select:none; -ms-user-select:none; user-select:none;
- -webkit-touch-callout:none; pointer-events:none;
-}
-.btn-bet{background:#ff0033;color:#fff;width:100%;padding:17px;border:none;border-radius:11px;font-weight:900;font-size:17px;cursor:pointer}
-.btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
-.btn-w{background:#25D366;color:#fff;padding:14px;border-radius:10px;text-align:center;text-decoration:none;font-weight:800}
-.btn-t{background:#2AABEE;color:#fff;padding:14px;border-radius:10px;text-align:center;text-decoration:none;font-weight:800}
-.game{border-bottom:1px solid #222;padding:12px 0;display:flex;justify-content:space-between;align-items:center}
-.tip{color:#00ff66;font-weight:800}
-.league{color:#777;font-size:12px}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',sans-serif}
+body{background:#000;color:#fff;padding:10px;max-width:450px;margin:auto}
+h1{text-align:center;font-size:19px;margin-top:8px}
+.sub{text-align:center;font-size:11px;color:#aaa;margin:3px 0 10px 0}
+.warn{background:#ffcc00;color:#000;text-align:center;font-size:10px;font-weight:800;padding:5px;border-radius:5px;margin-bottom:10px}
+.card{background:#111;border:1px solid #222;border-radius:10px;padding:10px;margin-bottom:10px}
+.card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.card-head h3{font-size:12px}
+.badge{background:#fff!important;color:#000!important;font-size:9px;font-weight:800;padding:3px 7px;border-radius:20px}
+.game{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #1a1a1a}
+.team{font-size:11px;font-weight:600;width:58%}
+.tip{font-size:10px;font-weight:700;color:#fff!important;text-align:right;width:38%}
+.code-label{text-align:center;font-size:9px;color:#666;margin:8px 0 4px 0;letter-spacing:1px}
+.code-box{background:#000;border:1px solid #222;text-align:center;padding:7px;border-radius:7px;font-size:13px;font-weight:800;letter-spacing:2px}
+.btn-bet{display:block;width:100%;background:#ff0033;color:#fff;text-align:center;padding:9px;border-radius:7px;font-size:11px;font-weight:800;text-decoration:none;margin-top:8px}
+.community-text{text-align:center;margin:10px 0 6px 0;font-size:12px;font-weight:500;color:#aaa}
+.channels{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:2px}
+.channels a{text-align:center;padding:8px;border-radius:7px;font-size:10px;font-weight:700;text-decoration:none}
+.wa{background:#00c853!important;color:#fff!important} /* ORIGINAL GREEN */
+.tg{background:#29a6ff!important;color:#fff!important} /* ORIGINAL BLUE */
+.no-tips{text-align:center;color:#777;font-size:11px;padding:12px}
 </style>
 </head>
 <body>
-<div class="header">
 <h1>Welcome to Predict Today</h1>
-<p>let's win together 💪</p>
-</div>
-<div class="banner">⚠️ 18+ BET RESPONSIBLY ⚠️ 18+ BET RESPONSIBLY ⚠️</div>
+<p class="sub">let's win together 💪</p>
+<div class="warn">⚠️ 18+ BET RESPONSIBLY ⚠️ 18+ BET RESPONSIBLY ⚠️</div>
 <div class="card">
-<div class="top"><h3>Today's Games</h3><span class="badge">8 GAMES</span></div>
-<div id="list"><div class="empty">No tips yet</div></div>
-<div style="text-align:center;color:#777;font-size:12px;margin-top:12px">BOOKING CODE</div>
-<div class="code-box" id="code">------</div>
-<button class="btn-bet" onclick="betNow()">🔥 BET NOW ON SPORTYBET</button>
+<div class="card-head"><h3>Today's Games</h3><span class="badge" id="gameCount">8 GAMES</span></div>
+<div id="gamesList"><p class="no-tips">No tips yet</p></div>
+<div class="code-label">BOOKING CODE</div>
+<div class="code-box" id="bookingCode">------</div>
+<a id="betLink" href="#" class="btn-bet">🔥 BET NOW ON SPORTYBET</a>
+<p class="community-text">Join our community</p>
+<div class="channels">
+<a href="https://whatsapp.com/channel/0029VbBw0Qb0gcfD2n7v1J1N" class="wa">WhatsApp Channel</a>
+<a href="https://t.me/+yourdirectlink" class="tg">Telegram Channel</a>
 </div>
-<div class="btns">
-<a class="btn-w" href="https://whatsapp.com/channel/0029VbDaWqJ2f3EGNIgRsC1r" target="_blank">WhatsApp Channel</a>
-<a class="btn-t" href="https://t.me/yourchannel" target="_blank">Telegram Channel</a>
 </div>
 <script>
 const SUPABASE_URL="https://qsusnekkdlygkebedupb.supabase.co";
 const SUPABASE_ANON_KEY="sb_publishable_zrTE8rC6xJN7vt9qw_phTA_BqKC3EQW";
 const supa=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
-
-// PUT YOUR AFFILIATE LINK HERE - Replace this with your real affiliate link
-const AFFILIATE_LINK = "https://www.sportybet.com/ng/";
-
-async function load(){
- const {data} = await supa.from('predictions').select('*').order('created_at',{ascending:false}).limit(1).single();
- if(!data || !data.games || data.games.length===0){
-  document.getElementById('list').innerHTML='<div class="empty">No tips yet</div>';
-  return;
- }
- document.getElementById('code').innerText=data.booking_code||"------";
- let html="";
- data.games.forEach(g=>{
-  html+=`<div class="game"><div><div style="font-weight:700">${g.home} vs ${g.away}</div><div class="league">${g.league||''}</div></div><div class="tip">${g.tip}</div></div>`;
- });
- document.getElementById('list').innerHTML=html;
-}
-function betNow(){
- const codeEl=document.getElementById('code');
- const code=codeEl.innerText;
- if(code && code!=="------" && code!=="No tips yet"){
-  navigator.clipboard.writeText(code).then(()=>{
-    window.location.href = AFFILIATE_LINK;
-  }).catch(()=>{
-    // Fallback if clipboard fails
-    window.location.href = AFFILIATE_LINK;
+async function loadTips(){
+  const {data} = await supa.from('predictions').select('*').order('created_at',{ascending:false}).limit(1);
+  if(!data || data.length===0) return;
+  const latest = data[0];
+  if(!latest.games) return;
+  document.getElementById('gamesList').innerHTML='';
+  document.getElementById('gameCount').innerText = latest.games.length + ' GAMES';
+  document.getElementById('bookingCode').innerText = latest.booking_code || '------';
+  document.getElementById('betLink').href = 'https://www.sportybet.com/gh/l/share?code='+ (latest.booking_code || '');
+  latest.games.forEach(g=>{
+    document.getElementById('gamesList').innerHTML+=`<div class="game"><div class="team">${g.home} vs ${g.away}</div><div class="tip">${g.tip}</div></div>`;
   });
- } else {
-  window.location.href = AFFILIATE_LINK;
- }
 }
-load();
+loadTips();
 </script>
 </body>
 </html>
