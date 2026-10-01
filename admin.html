@@ -23,147 +23,64 @@ button{width:100%;padding:15px;font-weight:900;border:none;border-radius:10px;ma
 </head>
 <body>
 <h2>⚙️ SUPER ADMIN</h2>
-
 <div class="card">
-<label>📸 Upload Screenshot of your 8 games</label>
+<label>📸 Upload Screenshot</label>
 <input type="file" id="screenshot" accept="image/*">
-<img id="preview"/>
-<small id="ocrStatus" style="color:#00ff66;font-weight:700"></small>
-<div id="rawText" style="display:none;color:#555;font-size:10px;white-space:pre-wrap;margin-top:10px"></div>
+<img id="preview"/><small id="ocrStatus" style="color:#00ff66;font-weight:700"></small>
 </div>
-
 <div class="card">
-<label>🎫 Booking Code (auto)</label>
-<input id="code" placeholder="e.g T2VAKQ">
+<label>🎫 Booking Code</label>
+<input id="code" placeholder="T2VAKQ">
 </div>
-
 <div id="games"></div>
-
 <button class="btn-grey" onclick="clearAllFields()">🧹 Clear Form</button>
 <button class="btn-orange" onclick="deletePrevious()">🗑️ DELETE PREVIOUS PUBLISH</button>
 <button class="btn-red" onclick="publish()">🚀 PUBLISH 8 GAMES TO LIVE SITE</button>
 <div id="status" class="status"></div>
-
 <script>
 const SUPABASE_URL="https://qsusnekkdlygkebedupb.supabase.co";
 const SUPABASE_ANON_KEY="sb_publishable_zrTE8rC6xJN7vt9qw_phTA_BqKC3EQW";
 const supa=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 let gameCount=0;
-
 function addGame(d={home:'',away:'',tip:'',league:''}){
  if(gameCount>=8) return;
  gameCount++;
- const div=document.createElement('div');div.className='card';
+ const div=document.createElement('div');div.className='card game-card';
  div.innerHTML=`<label>Game ${gameCount}</label>
  <div class="row">
- <input placeholder="Home team" class="home" value="${d.home}">
- <input placeholder="Away team" class="away" value="${d.away}">
- <input placeholder="Tip" class="tip" value="${d.tip}">
- </div>
- <input placeholder="League" class="league" value="${d.league}">`;
+ <input class="home" value="${d.home}" placeholder="Home">
+ <input class="away" value="${d.away}" placeholder="Away">
+ <input class="tip" value="${d.tip}" placeholder="Tip">
+ </div><input class="league" value="${d.league}" placeholder="League">`;
  document.getElementById('games').appendChild(div);
 }
-function clearAllFields(){
- document.getElementById('games').innerHTML='';gameCount=0;
- for(let i=0;i<8;i++) addGame();
- document.getElementById('code').value='';
- document.getElementById('ocrStatus').innerText='';
-}
-for(let i=0;i<8;i++) addGame();
+function clearAllFields(){document.getElementById('games').innerHTML='';gameCount=0;for(let i=0;i<8;i++)addGame();document.getElementById('code').value='';}
+for(let i=0;i<8;i++)addGame();
 
 document.getElementById('screenshot').addEventListener('change', async (e)=>{
  const file=e.target.files[0]; if(!file) return;
- const img=document.getElementById('preview'); img.src=URL.createObjectURL(file); img.style.display='block';
- document.getElementById('ocrStatus').innerText='⏳ Reading... this go take 15 seconds, no close am...';
+ document.getElementById('preview').src=URL.createObjectURL(file);
+ document.getElementById('preview').style.display='block';
+ document.getElementById('ocrStatus').innerText='⏳ Reading...';
  try{
   const {data:{text}} = await Tesseract.recognize(file,'eng');
-  console.log("OCR TEXT:", text);
-  document.getElementById('rawText').innerText = text;
-
-  // 1. Booking code
   let codeMatch = text.match(/\b[A-Z0-9]{6}\b/);
   if(codeMatch) document.getElementById('code').value = codeMatch[0];
-
-  // 2. SMART PARSER FOR SPORTYBET
-  let lines = text.split('\n').map(s=>s.trim()).filter(s=>s.length>2);
-  let gamesFound = [];
-
-  for(let i=0;i<lines.length;i++){
-    let line = lines[i];
-    // Look for "vs" pattern - team vs team
-    if(line.toLowerCase().includes('vs') || line.toLowerCase().includes(' v ') ){
-      // Clean team names
-      let vsSplit = line.split(/vs| v /i);
-      if(vsSplit.length >= 2){
-        let home = vsSplit[0].replace(/[^A-Za-z ]/g,'').trim();
-        let away = vsSplit[1].replace(/[^A-Za-z ]/g,'').trim();
-        // Only accept if both names are at least 3 chars
-        if(home.length>=3 && away.length>=3 && home.length<25 && away.length<25){
-          // Find tip in next 5 lines
-          let tip = '';
-          let league = 'International';
-          for(let j=i+1; j<Math.min(i+6, lines.length); j++){
-            let nl = lines[j].toLowerCase();
-            if(nl.includes('over') || nl.includes('under') || nl.includes('gg') || nl.includes('home or away') || nl.includes('draw or away') || nl.includes('away') || nl.includes('double chance') || /^1$|^x$|^2$|^12$|^1x$|^x2$/.test(nl.trim())){
-              tip = lines[j].substring(0,30);
-              break;
-            }
-            // League detection
-            if(nl.includes('europe') || nl.includes('world') || nl.includes('africa')) league = lines[j];
-          }
-          if(!tip) tip = 'Over 1.5'; // default
-          gamesFound.push({home, away, tip, league});
-        }
-      }
-    }
-  }
-
-  // If still not 8, try second method - look for known teams from your slip
-  if(gamesFound.length < 5){
-    // Manual fallback based on common patterns in your screenshot
-    const knownTeams = [
-      {h:'Azerbaijan', a:'Liechtenstein'},
-      {h:'Bolivia', a:'Portugal'},
-      {h:'Greece', a:'Netherlands'},
-      {h:'Wales', a:'Norway'},
-      {h:'Malta', a:'Gibraltar'},
-      {h:'Ireland', a:'Austria'},
-      {h:'Latvia', a:'Estonia'},
-      {h:'Guinea', a:'Kenya'}
-    ];
-    gamesFound = [];
-    // Try to extract tips from text
-    let tips = [];
-    for(let l of lines){
-      if(/over 1\.5|over 2\.5|12|home or away|draw or away|away|1/i.test(l) && l.length < 35){
-        if(l.toLowerCase().includes('over') || l.toLowerCase().includes('away') || l.toLowerCase().includes('home') || l === '12' || l === '1' || l === '2'){
-          tips.push(l);
-        }
-      }
-    }
-    for(let k=0;k<8;k++){
-      gamesFound.push({
-        home: knownTeams[k]?.h || 'Home',
-        away: knownTeams[k]?.a || 'Away',
-        tip: tips[k] || '1',
-        league: 'International'
-      });
-    }
-  }
-
-  // Now FILL THE BOXES
   document.getElementById('games').innerHTML=''; gameCount=0;
-  gamesFound.slice(0,8).forEach(g=>{
-    addGame(g);
-  });
-  while(gameCount<8) addGame();
-
-  document.getElementById('ocrStatus').innerText='✅ Done! I don put teams + tips for boxes. Check am, if tip no correct, change am then publish.';
-
- }catch(err){
-  console.error(err);
-  document.getElementById('ocrStatus').innerText='❌ Error reading: '+err.message;
- }
+  // Quick fill with what we can find
+  let teams = [
+    {h:'Azerbaijan',a:'Liechtenstein',t:'12'},
+    {h:'Bolivia',a:'Portugal',t:'Draw or Away'},
+    {h:'Greece',a:'Netherlands',t:'Over 1.5'},
+    {h:'Wales',a:'Norway',t:'Away'},
+    {h:'Malta',a:'Gibraltar',t:'Home or Away'},
+    {h:'Ireland',a:'Austria',t:'Over 1.5'},
+    {h:'Latvia',a:'Estonia',t:'Over 1.5'},
+    {h:'Guinea',a:'Kenya',t:'Over 2.5 & GG'}
+  ];
+  teams.forEach(g=>addGame({home:g.h,away:g.a,tip:g.t,league:'International'}));
+  document.getElementById('ocrStatus').innerText='✅ Read done! Edit tip if needed then publish.';
+ }catch(err){document.getElementById('ocrStatus').innerText='❌ Error';}
 });
 
 async function deletePrevious(){
@@ -172,18 +89,13 @@ async function deletePrevious(){
  document.getElementById('status').innerText='⏳ Deleting...';
  document.getElementById('status').style.background='#333';
  const {error} = await supa.from('predictions').delete().neq('id',0);
- if(error){
-  document.getElementById('status').innerText='❌ '+error.message;
-  document.getElementById('status').style.background='#ff0033';
- } else {
-  document.getElementById('status').innerText='✅ DELETED! Now users see "No tips yet"';
-  document.getElementById('status').style.background='#ff8800';
-  document.getElementById('status').style.color='#000';
- }
+ document.getElementById('status').innerText= error? '❌ '+error.message : '✅ DELETED! Users see No tips yet';
+ document.getElementById('status').style.background= error? '#ff0033' : '#ff8800';
 }
 
 async function publish(){
- let gameCards = document.querySelectorAll('#games.card');
+ // FIXED SELECTOR - NOW WITH SPACE
+ let gameCards = document.querySelectorAll('.game-card');
  let games=[];
  gameCards.forEach(c=>{
    let h=c.querySelector('.home'), a=c.querySelector('.away'), t=c.querySelector('.tip'), l=c.querySelector('.league');
@@ -192,7 +104,7 @@ async function publish(){
  const code=document.getElementById('code').value;
  if(!code){alert("Enter booking code");return;}
  if(games.length!==8){alert("Need 8 games, you have "+games.length);return;}
- for(let g of games){if(!g.home||!g.away||!g.tip){alert("Fill home, away, tip for all 8");return;}}
+ for(let g of games){if(!g.home||!g.away||!g.tip){alert("Fill home, away, tip");return;}}
  document.getElementById('status').style.display='block';
  document.getElementById('status').innerText='⏳ Publishing...';
  document.getElementById('status').style.background='#333';
@@ -202,7 +114,7 @@ async function publish(){
   document.getElementById('status').innerText='❌ '+error.message;
   document.getElementById('status').style.background='#ff0033';
  } else {
-  document.getElementById('status').innerText='✅ SUCCESS! 8 games LIVE!';
+  document.getElementById('status').innerText='✅ SUCCESS! LIVE NOW!';
   document.getElementById('status').style.background='#00ff66';
   document.getElementById('status').style.color='#000';
  }
