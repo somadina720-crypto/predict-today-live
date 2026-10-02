@@ -3,77 +3,29 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Predict Today</title>
+<title>Predict Today's Live</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-*{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',sans-serif}
-body{background:#000;color:#fff;padding:10px;max-width:450px;margin:auto; -webkit-touch-callout:none; -webkit-user-select:none; user-select:none}
-h1{text-align:center;font-size:19px;margin-top:8px}
-.sub{text-align:center;font-size:11px;color:#aaa;margin:3px 0 10px 0}
-.warn{background:#ffcc00;color:#000;text-align:center;font-size:10px;font-weight:800;padding:5px;border-radius:5px;margin-bottom:10px}
-.card{background:#111;border:1px solid #222;border-radius:10px;padding:10px;margin-bottom:10px}
-.card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.card-head h3{font-size:12px}
-.badge{background:#fff!important;color:#000!important;font-size:9px;font-weight:800;padding:3px 7px;border-radius:20px}
-.game{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #1a1a1a}
-.team{font-size:11px;font-weight:600;width:58%}
-.tip{font-size:10px;font-weight:700;color:#fff!important;text-align:right;width:38%}
-.code-label{text-align:center;font-size:9px;color:#666;margin:8px 0 4px 0;letter-spacing:1px}
-.code-box{
-  background:#000;border:1px solid #222;text-align:center;padding:7px;border-radius:7px;
-  font-size:13px;font-weight:800;letter-spacing:2px;
-  user-select:none!important;
-  -webkit-user-select:none!important;
-  -moz-user-select:none!important;
-  -webkit-touch-callout:none!important;
-  pointer-events:none;
-}
-.btn-bet{display:block;width:100%;background:#ff0033;color:#fff;text-align:center;padding:9px;border-radius:7px;font-size:11px;font-weight:800;text-decoration:none;margin-top:8px}
-.community-text{text-align:center;margin:10px 0 6px 0;font-size:12px;font-weight:500;color:#aaa}
-.channels{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:2px}
-.channels a{text-align:center;padding:8px;border-radius:7px;font-size:10px;font-weight:700;text-decoration:none; user-select:none; -webkit-user-select:none}
-.wa{background:#00c853!important;color:#fff!important}
-.tg{background:#29a6ff!important;color:#fff!important}
-.no-tips{text-align:center;color:#777;font-size:11px;padding:12px}
-</style>
-</head>
-<body oncontextmenu="return false" oncopy="return false" oncut="return false" onpaste="return false">
-<h1>Welcome to Predict Today</h1>
-<p class="sub">let's win together 💪</p>
-<div class="warn">⚠️ 18+ BET RESPONSIBLY ⚠️ 18+ BET RESPONSIBLY ⚠️</div>
-<div class="card">
-<div class="card-head"><h3>Today's Games</h3><span class="badge" id="gameCount">8 GAMES</span></div>
-<div id="gamesList"><p class="no-tips">No tips yet</p></div>
-<div class="code-label">BOOKING CODE</div>
-<div class="code-box" id="bookingCode">------</div>
-<a id="betLink" href="#" class="btn-bet">🔥 BET NOW ON SPORTYBET</a>
-<p class="community-text">Join our community</p>
-<div class="channels">
-<a href="https://whatsapp.com/channel/0029VbBw0Qb0gcfD2n7v1J1N" class="wa">WhatsApp Channel</a>
-<a href="https://t.me/+yourdirectlink" class="tg">Telegram Channel</a>
-</div>
-</div>
-<script>
-const SUPABASE_URL="https://qsusnekkdlygkebedupb.supabase.co";
-const SUPABASE_ANON_KEY="sb_publishable_zrTE8rC6xJN7vt9qw_phTA_BqKC3EQW";
-const supa=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
-async function loadTips(){
-  const {data} = await supa.from('predictions').select('*').order('created_at',{ascending:false}).limit(1);
-  if(!data || data.length===0) return;
-  const latest = data[0];
-  if(!latest.games) return;
-  document.getElementById('gamesList').innerHTML='';
-  document.getElementById('gameCount').innerText = latest.games.length + ' GAMES';
-  document.getElementById('bookingCode').innerText = latest.booking_code || '------';
-  document.getElementById('betLink').href = 'https://www.sportybet.com/gh/l/share?code='+ (latest.booking_code || '');
-  latest.games.forEach(g=>{
-    document.getElementById('gamesList').innerHTML+=`<div class="game"><div class="team">${g.home} vs ${g.away}</div><div class="tip">${g.tip}</div></div>`;
-  });
-}
-// Extra protection against copy
-document.addEventListener('copy', e => e.preventDefault());
-document.addEventListener('contextmenu', e => e.preventDefault());
-loadTips();
-</script>
-</body>
-</html>
+*{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif}
+body{background:#eceae6;display:flex;justify-content:center;min-height:100vh}
+.phone{width:100%;max-width:430px;background:#f5f5f3;min-height:100vh}
+.header{background:#171717;padding:48px 20px 34px;border-radius:0 0 32px 32px;text-align:center}
+.header h1{color:#3aa8e8;font-size:36px;font-weight:900}
+.header p{color:#fff;margin-top:14px;font-size:14px}
+.tabs{display:flex;gap:14px;padding:0 18px;margin-top:-22px;position:relative;z-index:5}
+.tab{flex:1;background:#fff;border-radius:20px;padding:14px;text-align:center;font-weight:800;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,.12);border:3px solid #fff}
+.tab.active{border-color:#1e9be0}
+.content{padding:18px 14px 10px}
+.tip-card{background:#fff;border-radius:18px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;box-shadow:0 2px 10px rgba(0,0,0,.07)}
+.team{font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px}
+.vs{font-size:13px;margin:2px 0 2px 36px;font-weight:600}
+.logo{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.right{text-align:right;margin-left:10px}
+.tip-badge{background:#0d8ddf;color:#fff;padding:6px 14px;border-radius:999px;font-size:12.5px;font-weight:800;display:inline-block}
+.conf{font-size:12px;margin-top:6px;display:flex;justify-content:flex-end;gap:4px}
+.time{font-size:11px;color:#333;margin-top:3px;display:flex;justify-content:flex-end;gap:4px}
+.code-box{background:#fff;border-radius:16px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;margin-top:8px;box-shadow:0 2px 10px rgba(0,0,0,.07)}
+.code-val{font-weight:900;font-size:22px}
+.bet-btn{width:100%;background:#1590de;color:#fff;border:none;border-radius:999px;padding:15px;font-weight:800;font-size:18px;margin-top:14px;display:flex;justify-content:center;gap:10px;cursor:pointer}
+.bet-logo{background:#fff;color:#0b6db6;border-radius:999px;padding:6px 12px;font-weight:900;font-size:14px}
+.promo{text
