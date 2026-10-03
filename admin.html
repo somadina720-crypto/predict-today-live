@@ -60,6 +60,12 @@ input:focus,textarea:focus{outline:2px solid #1d9bf0;outline-offset:1px}
     <button class="btn blue" id="publish">Publish Slip to Site</button>
     <button class="btn red" id="clearSlip">Clear previous slip from dashboard</button>
     <div class="hint" style="text-align:center">Clear Form only empties the fields above. Only the red button removes the live slip from users and saves it in History.</div>
+    <h2>VIP settings</h2>
+    <div class="hint">Users who tap "Get VIP tips" open a WhatsApp chat with this number. Leave the number empty to hide the VIP box.</div>
+    <input type="text" id="vipNum" placeholder="WhatsApp number, e.g. 2348012345678" inputmode="tel" autocomplete="off">
+    <input type="text" id="vipPrice" placeholder="VIP price, e.g. &#8358;5,000" autocomplete="off">
+    <input type="text" id="vipMsg" placeholder="Message users send you (optional)" autocomplete="off">
+    <button class="btn blue" id="saveVip">Save VIP settings</button>
     <h2>Edit results</h2>
     <div class="hint">Mark each game WON or LOST, then save. The user's History box turns green or red.</div>
     <div id="results"><div class="hint">Loading…</div></div>
@@ -142,6 +148,26 @@ $("clearSlip").onclick=async()=>{
   finally{b.disabled=false}
 };
 
+async function loadVip(){
+  try{
+    const{data}=await db.from("site_settings").select("*").eq("id",1).maybeSingle();
+    if(data){$("vipNum").value=data.vip_whatsapp||"";$("vipPrice").value=data.vip_price||"";$("vipMsg").value=data.vip_message||""}
+  }catch(e){}
+}
+$("saveVip").onclick=async()=>{
+  let n=$("vipNum").value.replace(/\D/g,"");
+  if(/^0\d{10}$/.test(n))n="234"+n.slice(1);
+  if(n&&n.length<10)return toast("Check the WhatsApp number");
+  const b=$("saveVip");b.disabled=true;b.textContent="Saving…";
+  try{
+    const r=await db.from("site_settings").upsert({id:1,vip_whatsapp:n,vip_price:$("vipPrice").value.trim(),vip_message:$("vipMsg").value.trim()||"Hello, I want the VIP tips"});
+    if(r.error)throw r.error;
+    $("vipNum").value=n;
+    toast(n?"VIP settings saved":"VIP box hidden from users");
+  }catch(e){toast("Couldn't save: "+(e.message||"run the SQL in Supabase first"))}
+  finally{b.disabled=false;b.textContent="Save VIP settings"}
+};
+
 const state={};
 async function loadResults(){
   const box=$("results");
@@ -190,7 +216,7 @@ $("results").addEventListener("click",async e=>{
   finally{sv.disabled=false;sv.textContent="Save result"}
 });
 
-function showBoard(on){$("login").style.display=on?"none":"flex";$("board").style.display=on?"flex":"none";if(on){refresh();loadResults()}}
+function showBoard(on){$("login").style.display=on?"none":"flex";$("board").style.display=on?"flex":"none";if(on){refresh();loadResults();loadVip()}}
 $("loginBtn").onclick=async()=>{
   $("loginErr").textContent="";
   const{error}=await db.auth.signInWithPassword({email:$("em").value.trim(),password:$("pw").value});
