@@ -50,7 +50,10 @@ main{flex:1;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
 .code small{display:block;color:var(--muted);font-size:11px}.code b{font-size:18px}
 .cp{background:none;border:0;color:var(--muted);cursor:pointer;padding:6px;display:inline-flex}
 .btn{display:flex;align-items:center;justify-content:center;gap:8px;border-radius:999px;padding:13px;font-weight:600;font-size:16px;color:#fff;text-decoration:none}
-.promo{text-align:center;font-size:13px;color:var(--muted)}.promo b{color:#fff;font-size:15px}
+.promo{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px 6px;text-align:center;font-size:13px;color:var(--muted)}.promo b{color:#fff;font-size:15px}
+.promo .pc{white-space:nowrap}
+.promo .hand{font-size:24px;line-height:1}
+.promo .new{font-size:11px;line-height:1.3;color:var(--muted);text-align:left}
 .join{display:flex;gap:10px}.join .btn{flex:1;font-size:15px}
 .legal{text-align:center;font-size:11px;color:#6b7280}
 #toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#fff;color:#111;padding:8px 16px;border-radius:999px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s}
@@ -109,7 +112,7 @@ const resClass=r=>r==="won"?"won":r==="lost"?"lost":"none";
 function stickyHTML(code){
   return (code?`<div class="code"><div><small>Bet Slip Code:</small><b>${esc(code)}</b></div><button class="cp" data-copy="${esc(code)}" aria-label="Copy bet slip code">${ICON.copy}</button></div>`:"")+
   `<a class="btn" style="background:var(--blue-dark)" href="${esc(CONFIG.AFFILIATE_LINK)}" target="_blank" rel="noopener noreferrer sponsored">Bet now on 1xBet</a>
-   <div class="promo">promo code: <b>${esc(CONFIG.PROMO_CODE)}</b> <button class="cp" data-copy="${esc(CONFIG.PROMO_CODE)}" aria-label="Copy promo code" style="display:inline-flex;vertical-align:middle">${ICON.copy}</button></div>
+   <div class="promo"><span class="pc">promo code: <b>${esc(CONFIG.PROMO_CODE)}</b></span><button class="cp" data-copy="${esc(CONFIG.PROMO_CODE)}" aria-label="Copy promo code">${ICON.copy}</button><span class="hand" role="img" aria-label="Pointing at the promo code">&#128072;</span><span class="new">New users only,<br>T&amp;C apply</span></div>
    <div class="join"><a class="btn" style="background:var(--blue-dark)" href="${esc(CONFIG.TELEGRAM_LINK)}" target="_blank" rel="noopener noreferrer">${ICON.tg}join now</a>
    <a class="btn" style="background:var(--green)" href="${esc(CONFIG.WHATSAPP_LINK)}" target="_blank" rel="noopener noreferrer">${ICON.wa}join now</a></div>
    <div class="legal">18+ only. Tips are predictions, not guarantees. Gamble responsibly.</div>`;
