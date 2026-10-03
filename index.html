@@ -2,30 +2,182 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Predict Today's Live</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif}
-body{background:#eceae6;display:flex;justify-content:center;min-height:100vh}
-.phone{width:100%;max-width:430px;background:#f5f5f3;min-height:100vh}
-.header{background:#171717;padding:48px 20px 34px;border-radius:0 0 32px 32px;text-align:center}
-.header h1{color:#3aa8e8;font-size:36px;font-weight:900}
-.header p{color:#fff;margin-top:14px;font-size:14px}
-.tabs{display:flex;gap:14px;padding:0 18px;margin-top:-22px;position:relative;z-index:5}
-.tab{flex:1;background:#fff;border-radius:20px;padding:14px;text-align:center;font-weight:800;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,.12);border:3px solid #fff}
-.tab.active{border-color:#1e9be0}
-.content{padding:18px 14px 10px}
-.tip-card{background:#fff;border-radius:18px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;box-shadow:0 2px 10px rgba(0,0,0,.07)}
-.team{font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px}
-.vs{font-size:13px;margin:2px 0 2px 36px;font-weight:600}
-.logo{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
-.right{text-align:right;margin-left:10px}
-.tip-badge{background:#0d8ddf;color:#fff;padding:6px 14px;border-radius:999px;font-size:12.5px;font-weight:800;display:inline-block}
-.conf{font-size:12px;margin-top:6px;display:flex;justify-content:flex-end;gap:4px}
-.time{font-size:11px;color:#333;margin-top:3px;display:flex;justify-content:flex-end;gap:4px}
-.code-box{background:#fff;border-radius:16px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;margin-top:8px;box-shadow:0 2px 10px rgba(0,0,0,.07)}
-.code-val{font-weight:900;font-size:22px}
-.bet-btn{width:100%;background:#1590de;color:#fff;border:none;border-radius:999px;padding:15px;font-weight:800;font-size:18px;margin-top:14px;display:flex;justify-content:center;gap:10px;cursor:pointer}
-.bet-logo{background:#fff;color:#0b6db6;border-radius:999px;padding:6px 12px;font-weight:900;font-size:14px}
-.promo{text
+:root{--bg:#0b0d12;--card:#171a22;--line:#2a2f3a;--text:#fff;--muted:#9ca3af;--blue:#1d9bf0;--blue-dark:#0f7fd1;--green:#16a34a;--red:#dc2626}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh;display:flex;justify-content:center}
+#app{width:100%;max-width:480px;min-height:100vh;display:flex;flex-direction:column}
+header{padding:20px 16px 0;position:sticky;top:0;background:var(--bg);z-index:5}
+h1{font-size:26px;font-weight:600;color:var(--blue);text-align:center}
+.tag{text-align:center;color:var(--muted);font-size:13px;margin:4px 0 12px}
+.tabs{display:flex}
+.tab{flex:1;background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);font-size:15px;padding:12px 0;cursor:pointer}
+.tab.on{color:var(--text);font-weight:600;border-bottom-color:var(--green)}
+.top{display:flex;align-items:center;gap:12px;padding-bottom:12px}
+.back{width:42px;height:42px;border-radius:50%;background:#1f2937;border:1.5px solid var(--green);color:#fff;font-size:22px;cursor:pointer;flex:none}
+.top .t{flex:1;text-align:center;font-size:16px;font-weight:600;margin-right:42px}
+main{flex:1;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.card{background:var(--card);border-radius:14px;padding:14px;display:flex;align-items:center;gap:12px}
+.badge{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex:none}
+.teams{flex:1;min-width:0}
+.teams b{display:block;font-size:15px;overflow-wrap:anywhere}
+.teams i{font-style:normal;font-size:11px;color:var(--muted)}
+.meta{text-align:right;flex:none;max-width:48%}
+.pill{display:inline-block;background:var(--blue);color:#fff;font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px}
+.when{font-size:11px;color:var(--muted);margin-top:6px}
+.empty{margin:auto;text-align:center;color:var(--muted);padding:60px 0;font-size:18px}
+.hbox{border:0;width:100%;text-align:left;border-radius:16px;padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font:inherit}
+.hbox.won{background:#d1edc4;color:#173404}.hbox.lost{background:#f9a8a8;color:#501313}.hbox.none{background:#e5e7eb;color:#1f2937}
+.hbox .l{font-size:19px;font-weight:600}.hbox .d{font-size:12px;margin-top:2px;opacity:.85}
+.rp{color:#fff;font-size:12px;font-weight:600;padding:6px 11px;border-radius:8px}
+.rp.won{background:var(--green)}.rp.lost{background:var(--red)}
+.banner{display:flex;align-items:center;gap:10px;padding:16px;font-size:26px;font-weight:700;margin:0 -16px}
+.banner.won{background:var(--green)}.banner.lost{background:var(--red)}.banner.none{background:#4b5563}
+.details{background:var(--card);border-radius:16px;padding:16px}
+.details h3{font-size:15px;color:var(--muted);margin-bottom:4px}
+.row{padding:12px 0;border-bottom:1px solid var(--line)}.row:last-child{border:0}
+.row .pr{text-align:right}.row .pr span{font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;color:#fff;background:#4b5563}
+.row .pr span.won{background:var(--green)}.row .pr span.lost{background:var(--red)}
+.row b{font-size:17px;display:block;overflow-wrap:anywhere}.row small{color:var(--muted);font-size:13px}
+.placed{text-align:center;color:#6b7280;font-size:12px}
+.ghost{background:none;border:1px solid #374151;color:#fff;border-radius:10px;padding:12px;font-size:14px;cursor:pointer}
+.err{color:#fca5a5;text-align:center;padding:30px 0}
+.sticky{position:sticky;bottom:0;background:#12151c;padding:12px 16px calc(12px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line)}
+.code{display:flex;justify-content:space-between;align-items:center;background:var(--card);border-radius:12px;padding:10px 14px}
+.code small{display:block;color:var(--muted);font-size:11px}.code b{font-size:18px}
+.cp{background:none;border:0;color:var(--muted);cursor:pointer;padding:6px;display:inline-flex}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;border-radius:999px;padding:13px;font-weight:600;font-size:16px;color:#fff;text-decoration:none}
+.promo{text-align:center;font-size:13px;color:var(--muted)}.promo b{color:#fff;font-size:15px}
+.join{display:flex;gap:10px}.join .btn{flex:1;font-size:15px}
+.legal{text-align:center;font-size:11px;color:#6b7280}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#fff;color:#111;padding:8px 16px;border-radius:999px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="hdr"></header>
+  <main id="main"></main>
+  <div id="sticky" class="sticky"></div>
+  <div id="toast"></div>
+</div>
+<script>
+const CONFIG={
+  SUPABASE_URL:"https://qsusnekkdlygkebedupb.supabase.co",
+  SUPABASE_ANON_KEY:"sb_publishable_zrTE8rC6xJN7vt9qw_phTA_BqKC3EQW",
+  PROMO_CODE:"1x_5858288",
+  AFFILIATE_LINK:"https://reffpa.com/L?tag=d_6167163m_14987c_&site=6167163&ad=14987",
+  WHATSAPP_LINK:"https://whatsapp.com/channel/0029VbDaWqJ2f3EGNIgRsC1r",
+  TELEGRAM_LINK:"https://t.me/predict_Today_bets"
+};
+const db=supabase.createClient(CONFIG.SUPABASE_URL,CONFIG.SUPABASE_ANON_KEY);
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const COLORS=["#1e3a8a","#b91c1c","#ea580c","#0e7490","#6d28d9","#047857","#be185d","#92400e"];
+const ICON={copy:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>',
+  tg:'<svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M21.9 4.3 18.7 19.5c-.2 1-.9 1.3-1.7.8l-4.8-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.9 8.9-8c.4-.3-.1-.5-.6-.2L6.5 13.3 1.8 11.8c-1-.3-1-1 .2-1.5L20.400 3.200c.9-.3 1.700.2 1.500 1.100z"/></svg>',
+  wa:'<svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.800 14.200c-.2.700-1.300 1.300-1.800 1.300-.5.100-1 .2-3.300-.7-2.800-1.100-4.600-4-4.700-4.200-.1-.2-1.100-1.500-1.100-2.800s.7-2 1-2.300c.2-.3.500-.3.700-.3h.5c.2 0 .4 0 .6.500.2.600.8 2 .8 2.100.1.100.1.300 0 .5-.1.200-.1.300-.3.500l-.4.500c-.1.100-.3.300-.1.600.2.300.8 1.300 1.700 2.100 1.100 1 2 1.300 2.300 1.400.3.100.5.100.6-.1l.9-1.100c.2-.3.400-.2.600-.1l2 .9c.3.100.5.200.5.300.1.200.1.800-.1 1.500z"/></svg>'};
+
+let view="tips",activeSlip=null,historyCache=null,scrollY0=0;
+
+function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove("show"),1600)}
+async function copy(text){
+  try{await navigator.clipboard.writeText(text)}
+  catch(e){const a=document.createElement("textarea");a.value=text;document.body.appendChild(a);a.select();document.execCommand("copy");a.remove()}
+  toast("Copied!");
+}
+function dayDiff(iso){const a=new Date(iso),n=new Date();a.setHours(0,0,0,0);n.setHours(0,0,0,0);return Math.round((n-a)/864e5)}
+function dayLabel(iso){
+  const d=dayDiff(iso);
+  if(d<=0)return"today";if(d===1)return"yest.";if(d<7)return d+"ds ago";if(d<14)return"lw";
+  if(d<60)return Math.floor(d/7)+"ws ago";if(d<365)return Math.floor(d/30)+"mo ago";
+  return Math.floor(d/365)+"yrs ago";
+}
+const fmtDate=(iso,y)=>new Date(iso).toLocaleDateString("en-GB",{day:"numeric",month:"short",...(y?{year:"numeric"}:{})});
+const fmtTime=iso=>new Date(iso).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
+function whenLabel(iso){
+  if(!iso)return"";const d=dayDiff(iso);
+  const day=d===0?"Today":d===-1?"Tomorrow":fmtDate(iso);
+  return day+", "+fmtTime(iso);
+}
+const sortTips=t=>(t||[]).slice().sort((a,b)=>(a.position||0)-(b.position||0));
+const resClass=r=>r==="won"?"won":r==="lost"?"lost":"none";
+
+function stickyHTML(code){
+  return (code?`<div class="code"><div><small>Bet Slip Code:</small><b>${esc(code)}</b></div><button class="cp" data-copy="${esc(code)}" aria-label="Copy bet slip code">${ICON.copy}</button></div>`:"")+
+  `<a class="btn" style="background:var(--blue-dark)" href="${esc(CONFIG.AFFILIATE_LINK)}" target="_blank" rel="noopener noreferrer sponsored">Bet now on 1xBet</a>
+   <div class="promo">promo code: <b>${esc(CONFIG.PROMO_CODE)}</b> <button class="cp" data-copy="${esc(CONFIG.PROMO_CODE)}" aria-label="Copy promo code" style="display:inline-flex;vertical-align:middle">${ICON.copy}</button></div>
+   <div class="join"><a class="btn" style="background:var(--blue-dark)" href="${esc(CONFIG.TELEGRAM_LINK)}" target="_blank" rel="noopener noreferrer">${ICON.tg}join now</a>
+   <a class="btn" style="background:var(--green)" href="${esc(CONFIG.WHATSAPP_LINK)}" target="_blank" rel="noopener noreferrer">${ICON.wa}join now</a></div>
+   <div class="legal">18+ only. Tips are predictions, not guarantees. Gamble responsibly.</div>`;
+}
+const tabsHTML=()=>`<div class="tabs"><button class="tab ${view==="tips"?"on":""}" data-tab="tips">Today's tips</button><button class="tab ${view==="history"?"on":""}" data-tab="history">History</button></div>`;
+
+async function showTips(){
+  view="tips";
+  $("hdr").innerHTML=`<h1>Predict Today's Live</h1><div class="tag">win small daily, win big weekly</div>`+tabsHTML();
+  $("main").innerHTML=`<div class="empty">Loading…</div>`;
+  $("sticky").innerHTML=stickyHTML(null);$("sticky").style.display="flex";
+  const{data,error}=await db.from("slips").select("*, slip_tips(*)").eq("is_active",true).order("created_at",{ascending:false}).limit(1);
+  if(view!=="tips")return;
+  if(error){$("main").innerHTML=`<div class="err">Couldn't load tips. Check your connection and refresh.</div>`;return}
+  activeSlip=data&&data[0]||null;
+  const tips=activeSlip?sortTips(activeSlip.slip_tips):[];
+  if(!activeSlip||!tips.length){$("main").innerHTML=`<div class="empty">No tips yet</div>`;$("sticky").innerHTML=stickyHTML(null);return}
+  $("main").innerHTML=tips.map((t,i)=>`<div class="card"><div class="badge" style="background:${COLORS[i%COLORS.length]}">${esc((t.home_team||"?").trim().charAt(0).toUpperCase())}</div><div class="teams"><b>${esc(t.home_team)}</b><i>vs</i><b>${esc(t.away_team)}</b></div><div class="meta"><span class="pill">TIP: ${esc(t.tip)}</span><div class="when">${esc(whenLabel(t.kickoff))}${t.league?" • "+esc(t.league):""}</div></div></div>`).join("");
+  $("sticky").innerHTML=stickyHTML(activeSlip.booking_code);
+}
+
+async function showHistory(){
+  view="history";
+  $("hdr").innerHTML=`<div class="top"><button class="back" data-go="tips" aria-label="Back to today's tips">&#8592;</button><div class="t">Today's Live History</div></div>`+tabsHTML();
+  $("sticky").style.display="none";
+  $("main").innerHTML=`<div class="empty">Loading…</div>`;
+  const{data,error}=await db.from("slips").select("*, slip_tips(*)").eq("is_active",false).order("created_at",{ascending:false});
+  if(view!=="history")return;
+  if(error){$("main").innerHTML=`<div class="err">Couldn't load history. Check your connection and refresh.</div>`;return}
+  historyCache=data||[];
+  if(!historyCache.length){$("main").innerHTML=`<div class="empty">No history yet</div>`;return}
+  $("main").innerHTML=historyCache.map((s,i)=>{
+    const tips=sortTips(s.slip_tips),first=tips.map(t=>t.kickoff).filter(Boolean).sort()[0]||s.created_at;
+    const c=resClass(s.result);
+    return `<button class="hbox ${c}" data-open="${i}"><div><div class="l">${esc(dayLabel(s.created_at))}</div><div class="d">Match date: ${esc(fmtDate(first,true))}</div></div>${c==="none"?"":`<span class="rp ${c}">${c==="won"?"&#10003; WON":"&#10005; LOST"}</span>`}</button>`;
+  }).join("");
+  window.scrollTo(0,scrollY0);
+}
+
+function showDetail(i,push){
+  const s=historyCache[i];if(!s)return;
+  scrollY0=window.scrollY;view="detail";
+  if(push)history.pushState({d:i},"");
+  const c=resClass(s.result),word=c==="won"?"WON":c==="lost"?"LOST":"RESULT SOON",tips=sortTips(s.slip_tips);
+  $("hdr").innerHTML=`<div class="top" style="padding-top:0"><button class="back" data-go="history" aria-label="Back to history">&#8592;</button><div class="t">${esc(dayLabel(s.created_at))} - ${word} detail</div></div>`;
+  $("main").innerHTML=`<div class="banner ${c}">${c==="won"?"&#10003; WON":c==="lost"?"&#10005; LOST":"Result coming soon"}</div>
+  <div class="details"><h3>BET DETAILS</h3>${tips.map(t=>{const r=resClass(t.result);return `<div class="row"><div class="pr">${r==="none"?"":`<span class="${r}">${r.toUpperCase()}</span>`}</div><b>${esc(t.home_team)} vs ${esc(t.away_team)}</b><small>Pick: ${esc(t.tip)} • ${esc(t.kickoff?fmtDate(t.kickoff)+", "+fmtTime(t.kickoff):"")}${r==="none"?"":" "+r.toUpperCase()}</small></div>`}).join("")}</div>
+  <div class="placed">Placed • ${esc(fmtDate(s.created_at,true))} • ${esc(fmtTime(s.created_at))}</div>
+  <button class="ghost" data-go="history">&#8592; Back to history</button>`;
+  $("sticky").style.display="none";window.scrollTo(0,0);
+}
+
+function goBack(){if(view==="detail"){history.back()}else{showTips()}}
+
+document.addEventListener("click",e=>{
+  const cp=e.target.closest("[data-copy]");if(cp){copy(cp.dataset.copy);return}
+  const tab=e.target.closest("[data-tab]");if(tab){tab.dataset.tab==="tips"?showTips():showHistory();return}
+  const open=e.target.closest("[data-open]");if(open){showDetail(+open.dataset.open,true);return}
+  const go=e.target.closest("[data-go]");if(go){
+    if(view==="detail"){history.back()}else if(go.dataset.go==="tips"){showTips()}else{showHistory()}
+  }
+});
+window.addEventListener("popstate",()=>{if(view==="detail")showHistory()});
+
+db.channel("live").on("postgres_changes",{event:"*",schema:"public",table:"slips"},()=>{if(view==="tips")showTips();if(view==="history")showHistory()})
+  .on("postgres_changes",{event:"*",schema:"public",table:"slip_tips"},()=>{if(view==="tips")showTips()}).subscribe();
+
+showTips();
+</script>
+</body>
+</html>
