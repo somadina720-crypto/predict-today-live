@@ -177,39 +177,62 @@ async function loadSettings(){
 }
 function renderVip(){const b=$("vipbox");if(b)b.innerHTML=vipHTML()}
 
-async function showTips(){
+let lastSig="";
+async function showTips(silent){
   view="tips";
-  $("hdr").innerHTML=`<h1>Predict Today's Live</h1>`+tickerHTML()+tabsHTML();
-  initTicker();
-  $("main").innerHTML=`<div class="empty">Loading…</div>`;
-  $("sticky").innerHTML=stickyHTML(null);$("sticky").style.display="flex";
+  if(!silent){
+    lastSig="";
+    $("hdr").innerHTML=`<h1>Predict Today's Live</h1>`+tickerHTML()+tabsHTML();
+    initTicker();
+    $("main").innerHTML=`<div class="empty">Loading…</div>`;
+    $("sticky").innerHTML=stickyHTML(null);$("sticky").style.display="flex";
+  }
   const{data,error}=await db.from("slips").select("*, slip_tips(*)").eq("is_active",true).order("created_at",{ascending:false}).limit(1);
   if(view!=="tips")return;
-  if(error){$("main").innerHTML=`<div class="err">Couldn't load tips. Check your connection and refresh.</div>`;return}
-  activeSlip=data&&data[0]||null;
-  const tips=activeSlip?sortTips(activeSlip.slip_tips):[];
-  if(!activeSlip||!tips.length){$("main").innerHTML=`<div class="empty">No tips yet</div><div id="vipbox"></div>`;renderVip();$("sticky").innerHTML=stickyHTML(null);return}
+  if(error){if(!silent)$("main").innerHTML=`<div class="err">Couldn't load tips. Check your connection and refresh.</div>`;return}
+  const slip=data&&data[0]||null;
+  const tips=slip?sortTips(slip.slip_tips):[];
+  const sig=JSON.stringify([slip&&slip.id,slip&&slip.booking_code,tips.map(t=>[t.id,t.home_team,t.away_team,t.tip,t.kickoff,t.league])]);
+  if(silent&&sig===lastSig)return;
+  lastSig=sig;activeSlip=slip;
+  if(!slip||!tips.length){$("main").innerHTML=`<div class="empty">No tips yet</div><div id="vipbox"></div>`;renderVip();$("sticky").innerHTML=stickyHTML(null);return}
   $("main").innerHTML=tips.map((t,i)=>`<div class="card"><div class="badge" style="background:${COLORS[i%COLORS.length]}">${esc((t.home_team||"?").trim().charAt(0).toUpperCase())}</div><div class="teams"><b>${esc(t.home_team)}</b><i>vs</i><b>${esc(t.away_team)}</b></div><div class="meta"><span class="pill">TIP: ${esc(t.tip)}</span><div class="when">${esc(whenLabel(t.kickoff))}${t.league?" • "+esc(t.league):""}</div></div></div>`).join("")+`<div id="vipbox"></div>`;
   renderVip();
-  $("sticky").innerHTML=stickyHTML(activeSlip.booking_code);
+  $("sticky").innerHTML=stickyHTML(slip.booking_code);
 }
 
-async function showHistory(){
-  view="history";
-  $("hdr").innerHTML=`<div class="top"><button class="back" data-go="tips" aria-label="Back to today's tips">&#8592;</button><div class="t">Today's Live History</div></div>`+tabsHTML();
-  $("sticky").style.display="none";
-  $("main").innerHTML=`<div class="empty">Loading…</div>`;
+let histSig="";
+async function loadHistory(){
   const{data,error}=await db.from("slips").select("*, slip_tips(*)").eq("is_active",false).order("created_at",{ascending:false});
-  if(view!=="history")return;
-  if(error){$("main").innerHTML=`<div class="err">Couldn't load history. Check your connection and refresh.</div>`;return}
-  historyCache=data||[];
-  if(!historyCache.length){$("main").innerHTML=`<div class="empty">No history yet</div>`;return}
+  if(error)return null;
+  const sig=JSON.stringify((data||[]).map(s=>[s.id,s.result,s.created_at,(s.slip_tips||[]).map(t=>[t.id,t.result,t.tip,t.home_team,t.away_team])]));
+  const changed=sig!==histSig;histSig=sig;historyCache=data||[];return changed;
+}
+function renderHistory(){
+  if(!historyCache||!historyCache.length){$("main").innerHTML=`<div class="empty">No history yet</div>`;return}
   $("main").innerHTML=historyCache.map((s,i)=>{
     const tips=sortTips(s.slip_tips),first=tips.map(t=>t.kickoff).filter(Boolean).sort()[0]||s.created_at;
     const c=resClass(s.result);
     return `<button class="hbox ${c}" data-open="${i}"><div><div class="l">${esc(dayLabel(s.created_at))}</div><div class="d">Match date: ${esc(fmtDate(first,true))}</div></div>${c==="none"?"":`<span class="rp ${c}">${c==="won"?"&#10003; WON":"&#10005; LOST"}</span>`}</button>`;
   }).join("");
-  window.scrollTo(0,scrollY0);
+}
+async function refreshHistory(){
+  const ch=await loadHistory();
+  if(ch&&view==="history")renderHistory();
+}
+async function showHistory(){
+  view="history";
+  $("hdr").innerHTML=`<div class="top"><button class="back" data-go="tips" aria-label="Back to today's tips">&#8592;</button><div class="t">Today's Live History</div></div>`+tabsHTML();
+  $("sticky").style.display="none";
+  if(historyCache){
+    renderHistory();window.scrollTo(0,scrollY0);
+    refreshHistory();return;
+  }
+  $("main").innerHTML=`<div class="empty">Loading…</div>`;
+  const ch=await loadHistory();
+  if(view!=="history")return;
+  if(ch===null){$("main").innerHTML=`<div class="err">Couldn't load history. Check your connection and refresh.</div>`;return}
+  renderHistory();window.scrollTo(0,scrollY0);
 }
 
 function showDetail(i,push){
@@ -237,12 +260,16 @@ document.addEventListener("click",e=>{
 });
 window.addEventListener("popstate",()=>{if(view==="detail")showHistory()});
 
-db.channel("live").on("postgres_changes",{event:"*",schema:"public",table:"slips"},()=>{if(view==="tips")showTips();if(view==="history")showHistory()})
-  .on("postgres_changes",{event:"*",schema:"public",table:"slip_tips"},()=>{if(view==="tips")showTips()})
+db.channel("live").on("postgres_changes",{event:"*",schema:"public",table:"slips"},()=>{if(view==="tips")showTips(true);refreshHistory()})
+  .on("postgres_changes",{event:"*",schema:"public",table:"slip_tips"},()=>{if(view==="tips")showTips(true);refreshHistory()})
   .on("postgres_changes",{event:"*",schema:"public",table:"site_settings"},()=>loadSettings()).subscribe();
+setInterval(()=>{if(document.hidden)return;if(view==="tips")showTips(true);if(view==="history")refreshHistory()},15000);
+document.addEventListener("visibilitychange",()=>{if(document.hidden)return;if(view==="tips")showTips(true);refreshHistory()});
 
 showTips();
 loadSettings();
+loadHistory();
 </script>
 </body>
-</html>
+  </html>
+  
