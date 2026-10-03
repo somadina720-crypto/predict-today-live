@@ -1,124 +1,193 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Super Admin - Predict Today</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Official board</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 <style>
-*{box-sizing:border-box;font-family:'Segoe UI',sans-serif}
-body{background:#0a0a0a;color:#fff;padding:15px;max-width:650px;margin:auto}
-h2{color:#00ff66;text-align:center}
-.card{background:#151515;padding:14px;border-radius:12px;margin-bottom:12px;border:1px solid #222}
-label{font-size:13px;color:#aaa;display:block;margin:5px 0}
-input{width:100%;padding:13px;margin:6px 0;background:#000;border:1px solid #333;color:#fff;border-radius:8px}
-.row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-button{width:100%;padding:15px;font-weight:900;border:none;border-radius:10px;margin-top:10px;cursor:pointer;font-size:15px}
-.btn-grey{background:#222;color:#fff;border:1px solid #333}
-.btn-orange{background:#ff8800;color:#000}
-.btn-red{background:#ff0033;color:#fff}
-.status{margin-top:15px;text-align:center;font-weight:800;padding:12px;border-radius:8px;display:none}
-#preview{width:100%;max-height:400px;object-fit:contain;border-radius:10px;display:none;margin-top:10px;border:1px solid #333}
+:root{--bg:#0b0d12;--card:#171a22;--line:#2a2f3a;--text:#fff;--muted:#9ca3af;--blue:#0f7fd1;--green:#16a34a;--red:#dc2626}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;justify-content:center;min-height:100vh}
+#app{width:100%;max-width:520px;padding:20px 16px 60px;display:flex;flex-direction:column;gap:12px}
+h1{font-size:28px;font-weight:600;color:#1d9bf0;text-align:center}
+h2{font-size:17px;font-weight:600;margin-top:18px}
+input[type=text],input[type=email],input[type=password],textarea{width:100%;background:var(--card);border:1px solid #374151;border-radius:12px;color:#fff;padding:13px 14px;font:inherit;font-size:15px}
+textarea{min-height:200px;resize:vertical;line-height:1.7;font-size:14px}
+input::placeholder,textarea::placeholder{color:#6b7280}
+input:focus,textarea:focus{outline:2px solid #1d9bf0;outline-offset:1px}
+.btn{width:100%;border:1px solid #374151;background:var(--card);color:#fff;border-radius:12px;padding:14px;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
+.btn.blue{background:var(--blue);border-color:var(--blue)}.btn.red{background:#7f1d1d;border-color:#991b1b}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.hint{font-size:12px;color:var(--muted)}
+.count{font-size:13px;color:#22c55e}.count.bad{color:#fca5a5}
+.errs{font-size:12px;color:#fca5a5;line-height:1.6;white-space:pre-wrap}
+.file{display:flex;align-items:center;justify-content:center;gap:8px}
+.preview{max-height:160px;border-radius:10px;display:none;margin:0 auto}
+.slip{background:var(--card);border-radius:14px;padding:14px}
+.slip .h{font-weight:600;font-size:15px}.slip .h span{font-weight:400;color:var(--muted);font-size:12px;margin-left:6px}
+.sel{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
+.sel:last-of-type{border-bottom:0}.sel .n{flex:1;overflow-wrap:anywhere}
+.tog{display:flex;gap:6px}.tog button{border:1px solid #374151;background:none;color:var(--muted);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer}
+.tog button.won{background:var(--green);border-color:var(--green);color:#fff}.tog button.lost{background:var(--red);border-color:var(--red);color:#fff}
+.msg{font-size:12px;color:#fca5a5;margin-top:6px}
+.logout{background:none;border:0;color:var(--muted);font-size:13px;cursor:pointer;align-self:flex-end}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#fff;color:#111;padding:10px 18px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90%;text-align:center}
+#toast.show{opacity:1}
 </style>
 </head>
 <body>
-<h2>⚙️ SUPER ADMIN</h2>
-<div class="card">
-<label>📸 Upload Screenshot</label>
-<input type="file" id="screenshot" accept="image/*">
-<img id="preview"/><small id="ocrStatus" style="color:#00ff66;font-weight:700"></small>
+<div id="app">
+  <h1>Official board</h1>
+  <div id="login" style="display:none;flex-direction:column;gap:12px">
+    <input type="email" id="em" placeholder="Admin email" autocomplete="username">
+    <input type="password" id="pw" placeholder="Password" autocomplete="current-password">
+    <button class="btn blue" id="loginBtn">Log in</button>
+    <div class="errs" id="loginErr"></div>
+  </div>
+  <div id="board" style="display:none;flex-direction:column;gap:12px">
+    <button class="logout" id="logoutBtn">Log out</button>
+    <label class="btn file" for="file"><span>&#128206; Choose File</span></label>
+    <input type="file" id="file" accept="image/*" style="display:none">
+    <img class="preview" id="preview" alt="Slip preview">
+    <input type="text" id="code" placeholder="Enter booking code...">
+    <div class="hint">Enter your tips/slip here... one game per line, no limit</div>
+    <textarea id="tips" placeholder="1. Team A vs Team B | Home Win | 2026-10-03 18:30 | Premier League&#10;2. Team C vs Team D | Over 2.5 Goals | 2026-10-03 19:45 | La Liga&#10;3. "></textarea>
+    <div class="count" id="count">0 selections</div>
+    <div class="errs" id="errs"></div>
+    <button class="btn" id="clearForm">Clear Form</button>
+    <button class="btn blue" id="publish">Publish Slip to Site</button>
+    <button class="btn red" id="clearSlip">Clear previous slip from dashboard</button>
+    <div class="hint" style="text-align:center">Clear Form only empties the fields above. Only the red button removes the live slip from users and saves it in History.</div>
+    <h2>Edit results</h2>
+    <div class="hint">Mark each game WON or LOST, then save. The user's History box turns green or red.</div>
+    <div id="results"><div class="hint">Loading…</div></div>
+  </div>
+  <div id="toast"></div>
 </div>
-<div class="card">
-<label>🎫 Booking Code</label>
-<input id="code" placeholder="T2VAKQ">
-</div>
-<div id="games"></div>
-<button class="btn-grey" onclick="clearAllFields()">🧹 Clear Form</button>
-<button class="btn-orange" onclick="deletePrevious()">🗑️ DELETE PREVIOUS PUBLISH</button>
-<button class="btn-red" onclick="publish()">🚀 PUBLISH 8 GAMES TO LIVE SITE</button>
-<div id="status" class="status"></div>
 <script>
-const SUPABASE_URL="https://qsusnekkdlygkebedupb.supabase.co";
-const SUPABASE_ANON_KEY="sb_publishable_zrTE8rC6xJN7vt9qw_phTA_BqKC3EQW";
-const supa=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
-let gameCount=0;
-function addGame(d={home:'',away:'',tip:'',league:''}){
- if(gameCount>=8) return;
- gameCount++;
- const div=document.createElement('div');div.className='card game-card';
- div.innerHTML=`<label>Game ${gameCount}</label>
- <div class="row">
- <input class="home" value="${d.home}" placeholder="Home">
- <input class="away" value="${d.away}" placeholder="Away">
- <input class="tip" value="${d.tip}" placeholder="Tip">
- </div><input class="league" value="${d.league}" placeholder="League">`;
- document.getElementById('games').appendChild(div);
-}
-function clearAllFields(){document.getElementById('games').innerHTML='';gameCount=0;for(let i=0;i<8;i++)addGame();document.getElementById('code').value='';}
-for(let i=0;i<8;i++)addGame();
+const CONFIG={SUPABASE_URL:"https://qsusnekkdlygkebedupb.supabase.co",SUPABASE_ANON_KEY:"sb_publishable_zrTE8rC6xJN7vt9qw_phTA_BqKC3EQW"};
+const db=supabase.createClient(CONFIG.SUPABASE_URL,CONFIG.SUPABASE_ANON_KEY);
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove("show"),2400)}
+function dayDiff(iso){const a=new Date(iso),n=new Date();a.setHours(0,0,0,0);n.setHours(0,0,0,0);return Math.round((n-a)/864e5)}
+function dayLabel(iso){const d=dayDiff(iso);if(d<=0)return"today";if(d===1)return"yest.";if(d<7)return d+"ds ago";if(d<14)return"lw";if(d<60)return Math.floor(d/7)+"ws ago";if(d<365)return Math.floor(d/30)+"mo ago";return Math.floor(d/365)+"yrs ago"}
 
-document.getElementById('screenshot').addEventListener('change', async (e)=>{
- const file=e.target.files[0]; if(!file) return;
- document.getElementById('preview').src=URL.createObjectURL(file);
- document.getElementById('preview').style.display='block';
- document.getElementById('ocrStatus').innerText='⏳ Reading...';
- try{
-  const {data:{text}} = await Tesseract.recognize(file,'eng');
-  let codeMatch = text.match(/\b[A-Z0-9]{6}\b/);
-  if(codeMatch) document.getElementById('code').value = codeMatch[0];
-  document.getElementById('games').innerHTML=''; gameCount=0;
-  // Quick fill with what we can find
-  let teams = [
-    {h:'Azerbaijan',a:'Liechtenstein',t:'12'},
-    {h:'Bolivia',a:'Portugal',t:'Draw or Away'},
-    {h:'Greece',a:'Netherlands',t:'Over 1.5'},
-    {h:'Wales',a:'Norway',t:'Away'},
-    {h:'Malta',a:'Gibraltar',t:'Home or Away'},
-    {h:'Ireland',a:'Austria',t:'Over 1.5'},
-    {h:'Latvia',a:'Estonia',t:'Over 1.5'},
-    {h:'Guinea',a:'Kenya',t:'Over 2.5 & GG'}
-  ];
-  teams.forEach(g=>addGame({home:g.h,away:g.a,tip:g.t,league:'International'}));
-  document.getElementById('ocrStatus').innerText='✅ Read done! Edit tip if needed then publish.';
- }catch(err){document.getElementById('ocrStatus').innerText='❌ Error';}
+function parseTips(text){
+  const lines=text.split("\n").map(l=>l.trim()).filter(Boolean),out=[],errs=[];
+  lines.forEach((raw,i)=>{
+    const line=raw.replace(/^\d+[\.\)]\s*/,"").replace(/^['"]\s*$/,"").trim();
+    if(!line)return;
+    const p=line.split("|").map(s=>s.trim());
+    const n=out.length+errs.length+1;
+    const m=p[0].match(/^(.+?)\s+vs\.?\s+(.+)$/i);
+    if(!m){errs.push("Line "+(i+1)+": use  Team A vs Team B | Tip | 2026-10-03 18:30 | League");return}
+    if(!p[1]){errs.push("Line "+(i+1)+": missing the tip (e.g. Home Win)");return}
+    if(!p[2]||!/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}$/.test(p[2])||isNaN(new Date(p[2].replace(" ","T")))){errs.push("Line "+(i+1)+": date must look like 2026-10-03 18:30");return}
+    out.push({position:out.length+1,home_team:m[1].trim(),away_team:m[2].trim(),tip:p[1],kickoff:new Date(p[2].replace(" ","T")).toISOString(),league:p[3]||null});
+  });
+  return{tips:out,errs};
+}
+function refresh(){
+  const{tips,errs}=parseTips($("tips").value);
+  const c=$("count");c.textContent=tips.length+" selection"+(tips.length===1?"":"s")+(errs.length?" • "+errs.length+" with errors":"");
+  c.className="count"+(errs.length?" bad":"");$("errs").textContent=errs.join("\n");
+  return{tips,errs};
+}
+$("tips").addEventListener("input",refresh);
+$("file").addEventListener("change",e=>{
+  const f=e.target.files[0],p=$("preview");
+  if(!f){p.style.display="none";return}
+  p.src=URL.createObjectURL(f);p.style.display="block";
+});
+function resetForm(){$("file").value="";$("preview").style.display="none";$("code").value="";$("tips").value="";refresh()}
+$("clearForm").onclick=()=>{if(confirm("Clear the file, booking code and slip text from this form? This does not touch the live slip."))resetForm()};
+
+async function activeSlip(){
+  const{data,error}=await db.from("slips").select("id,image_url").eq("is_active",true).limit(1);
+  if(error)throw error;return data&&data[0]||null;
+}
+$("publish").onclick=async()=>{
+  const code=$("code").value.trim(),{tips,errs}=refresh();
+  if(!code)return toast("Enter the booking code");
+  if(errs.length)return toast("Fix the lines marked in red");
+  if(!tips.length)return toast("Add at least one selection");
+  const b=$("publish");b.disabled=true;b.textContent="Publishing…";
+  try{
+    if(await activeSlip()){toast("Clear the previous slip first");return}
+    let image_url=null;const f=$("file").files[0];
+    if(f){
+      const path=Date.now()+"-"+f.name.replace(/[^a-zA-Z0-9._-]/g,"_");
+      const up=await db.storage.from("slip-images").upload(path,f);if(up.error)throw up.error;
+      image_url=db.storage.from("slip-images").getPublicUrl(path).data.publicUrl;
+    }
+    const s=await db.from("slips").insert({booking_code:code,image_url,is_active:true}).select().single();if(s.error)throw s.error;
+    const t=await db.from("slip_tips").insert(tips.map(x=>({...x,slip_id:s.data.id})));
+    if(t.error){await db.from("slips").delete().eq("id",s.data.id);throw t.error}
+    toast("Published");resetForm();
+  }catch(e){toast("Couldn't publish: "+(e.message||"try again"))}
+  finally{b.disabled=false;b.textContent="Publish Slip to Site"}
+};
+$("clearSlip").onclick=async()=>{
+  const b=$("clearSlip");b.disabled=true;
+  try{
+    const s=await activeSlip();
+    if(!s){toast("No live slip to clear");return}
+    if(!confirm("Remove the live slip from users' Today's tips and move it to History?"))return;
+    const r=await db.from("slips").update({is_active:false}).eq("id",s.id);if(r.error)throw r.error;
+    toast("Moved to history");loadResults();
+  }catch(e){toast("Couldn't clear: "+(e.message||"try again"))}
+  finally{b.disabled=false}
+};
+
+const state={};
+async function loadResults(){
+  const box=$("results");
+  const{data,error}=await db.from("slips").select("*, slip_tips(*)").eq("is_active",false).order("created_at",{ascending:false});
+  if(error){box.innerHTML='<div class="msg">Couldn\'t load history. Refresh to try again.</div>';return}
+  if(!data.length){box.innerHTML='<div class="hint">No history yet. Cleared slips will appear here.</div>';return}
+  box.innerHTML=data.map(s=>{
+    const tips=(s.slip_tips||[]).slice().sort((a,b)=>a.position-b.position);
+    tips.forEach(t=>{state[t.id]=state[t.id]||t.result||null});
+    return `<div class="slip" style="margin-bottom:10px" data-slip="${esc(s.id)}"><div class="h">${esc(dayLabel(s.created_at))}<span>${esc(s.booking_code)}</span></div>`+
+      tips.map(t=>`<div class="sel"><div class="n">${esc(t.home_team)} vs ${esc(t.away_team)}<div class="hint">${esc(t.tip)}</div></div><div class="tog" data-tip="${esc(t.id)}"><button data-r="won" class="${state[t.id]==="won"?"won":""}">WON</button><button data-r="lost" class="${state[t.id]==="lost"?"lost":""}">LOST</button></div></div>`).join("")+
+      `<button class="btn blue" style="margin-top:8px;padding:11px" data-save="${esc(s.id)}">Save result</button><div class="msg" data-msg="${esc(s.id)}"></div></div>`;
+  }).join("");
+  box.dataset.ids=JSON.stringify(Object.fromEntries(data.map(s=>[s.id,(s.slip_tips||[]).map(t=>t.id)])));
+}
+$("results").addEventListener("click",async e=>{
+  const rb=e.target.closest("[data-r]");
+  if(rb){
+    const tid=rb.parentElement.dataset.tip,r=rb.dataset.r;state[tid]=r;
+    rb.parentElement.querySelectorAll("button").forEach(x=>x.className=x.dataset.r===state[tid]?state[tid]:"");return;
+  }
+  const sv=e.target.closest("[data-save]");if(!sv)return;
+  const sid=sv.dataset.save,ids=JSON.parse($("results").dataset.ids)[sid]||[],msg=document.querySelector('[data-msg="'+sid+'"]');
+  msg.textContent="";
+  if(ids.some(id=>!state[id])){msg.textContent="Mark every game WON or LOST first.";return}
+  sv.disabled=true;sv.textContent="Saving…";
+  try{
+    for(const id of ids){const r=await db.from("slip_tips").update({result:state[id]}).eq("id",id);if(r.error)throw r.error}
+    const result=ids.some(id=>state[id]==="lost")?"lost":"won";
+    const r=await db.from("slips").update({result}).eq("id",sid);if(r.error)throw r.error;
+    toast("Result saved: "+result.toUpperCase());
+  }catch(err){toast("Couldn't save: "+(err.message||"try again"))}
+  finally{sv.disabled=false;sv.textContent="Save result"}
 });
 
-async function deletePrevious(){
- if(!confirm("Delete old games?")) return;
- document.getElementById('status').style.display='block';
- document.getElementById('status').innerText='⏳ Deleting...';
- document.getElementById('status').style.background='#333';
- const {error} = await supa.from('predictions').delete().neq('id',0);
- document.getElementById('status').innerText= error? '❌ '+error.message : '✅ DELETED! Users see No tips yet';
- document.getElementById('status').style.background= error? '#ff0033' : '#ff8800';
-}
-
-async function publish(){
- // FIXED SELECTOR - NOW WITH SPACE
- let gameCards = document.querySelectorAll('.game-card');
- let games=[];
- gameCards.forEach(c=>{
-   let h=c.querySelector('.home'), a=c.querySelector('.away'), t=c.querySelector('.tip'), l=c.querySelector('.league');
-   if(h && a && t) games.push({home:h.value, away:a.value, tip:t.value, league:l.value});
- });
- const code=document.getElementById('code').value;
- if(!code){alert("Enter booking code");return;}
- if(games.length!==8){alert("Need 8 games, you have "+games.length);return;}
- for(let g of games){if(!g.home||!g.away||!g.tip){alert("Fill home, away, tip");return;}}
- document.getElementById('status').style.display='block';
- document.getElementById('status').innerText='⏳ Publishing...';
- document.getElementById('status').style.background='#333';
- await supa.from('predictions').delete().neq('id',0);
- const {error}=await supa.from('predictions').insert({games:games, booking_code:code});
- if(error){
-  document.getElementById('status').innerText='❌ '+error.message;
-  document.getElementById('status').style.background='#ff0033';
- } else {
-  document.getElementById('status').innerText='✅ SUCCESS! LIVE NOW!';
-  document.getElementById('status').style.background='#00ff66';
-  document.getElementById('status').style.color='#000';
- }
-}
+function showBoard(on){$("login").style.display=on?"none":"flex";$("board").style.display=on?"flex":"none";if(on){refresh();loadResults()}}
+$("loginBtn").onclick=async()=>{
+  $("loginErr").textContent="";
+  const{error}=await db.auth.signInWithPassword({email:$("em").value.trim(),password:$("pw").value});
+  if(error)$("loginErr").textContent="Wrong email or password. Try again.";
+};
+$("pw").addEventListener("keydown",e=>{if(e.key==="Enter")$("loginBtn").click()});
+$("logoutBtn").onclick=async()=>{await db.auth.signOut()};
+db.auth.onAuthStateChange((_e,session)=>showBoard(!!session));
+db.auth.getSession().then(({data})=>showBoard(!!data.session));
 </script>
 </body>
-</html>
+                                                                   </html>
+     
