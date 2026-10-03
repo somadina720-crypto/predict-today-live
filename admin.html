@@ -153,7 +153,7 @@ async function loadResults(){
     tips.forEach(t=>{state[t.id]=state[t.id]||t.result||null});
     return `<div class="slip" style="margin-bottom:10px" data-slip="${esc(s.id)}"><div class="h">${esc(dayLabel(s.created_at))}<span>${esc(s.booking_code)}</span></div>`+
       tips.map(t=>`<div class="sel"><div class="n">${esc(t.home_team)} vs ${esc(t.away_team)}<div class="hint">${esc(t.tip)}</div></div><div class="tog" data-tip="${esc(t.id)}"><button data-r="won" class="${state[t.id]==="won"?"won":""}">WON</button><button data-r="lost" class="${state[t.id]==="lost"?"lost":""}">LOST</button></div></div>`).join("")+
-      `<button class="btn blue" style="margin-top:8px;padding:11px" data-save="${esc(s.id)}">Save result</button><div class="msg" data-msg="${esc(s.id)}"></div></div>`;
+      `<button class="btn blue" style="margin-top:8px;padding:11px" data-save="${esc(s.id)}">Save result</button><button class="btn red" style="margin-top:8px;padding:11px" data-del="${esc(s.id)}">Delete this slip</button><div class="msg" data-msg="${esc(s.id)}"></div></div>`;
   }).join("");
   box.dataset.ids=JSON.stringify(Object.fromEntries(data.map(s=>[s.id,(s.slip_tips||[]).map(t=>t.id)])));
 }
@@ -162,6 +162,19 @@ $("results").addEventListener("click",async e=>{
   if(rb){
     const tid=rb.parentElement.dataset.tip,r=rb.dataset.r;state[tid]=r;
     rb.parentElement.querySelectorAll("button").forEach(x=>x.className=x.dataset.r===state[tid]?state[tid]:"");return;
+  }
+  const dl=e.target.closest("[data-del]");
+  if(dl){
+    if(!confirm("Delete this slip permanently? It will disappear from users' History. This cannot be undone."))return;
+    dl.disabled=true;dl.textContent="Deleting…";
+    try{
+      const sid=dl.dataset.del;
+      const a=await db.from("slip_tips").delete().eq("slip_id",sid);if(a.error)throw a.error;
+      const b=await db.from("slips").delete().eq("id",sid).select();if(b.error)throw b.error;
+      if(!b.data.length)throw new Error("not allowed, run the SQL in Supabase");
+      toast("Slip deleted");loadResults();
+    }catch(err){toast("Couldn't delete: "+(err.message||"try again"));dl.disabled=false;dl.textContent="Delete this slip"}
+    return;
   }
   const sv=e.target.closest("[data-save]");if(!sv)return;
   const sid=sv.dataset.save,ids=JSON.parse($("results").dataset.ids)[sid]||[],msg=document.querySelector('[data-msg="'+sid+'"]');
@@ -189,5 +202,4 @@ db.auth.onAuthStateChange((_e,session)=>showBoard(!!session));
 db.auth.getSession().then(({data})=>showBoard(!!data.session));
 </script>
 </body>
-                                                                   </html>
-     
+</html>
