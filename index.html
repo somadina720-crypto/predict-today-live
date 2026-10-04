@@ -73,6 +73,13 @@ main{flex:1;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
 .vip .vlock{line-height:0;margin:2px 0}
 .vip .v3{font-size:11px;font-weight:600}
 .vip .v4{font-size:9px;margin-top:1px}
+.pager{display:flex;align-items:flex-start;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 -16px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.pager::-webkit-scrollbar{display:none}
+.pg{flex:0 0 100%;min-width:0;scroll-snap-align:start;scroll-snap-stop:always;padding:0 16px;display:flex;flex-direction:column;gap:10px}
+.dots{display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;background:#374151}
+.dot.on{background:var(--green)}
+.dots span.t{margin-left:6px}
 @media (prefers-reduced-motion:reduce){.tl,.sp,.sh{animation:none}.tl{padding-left:0}}
 </style>
 </head>
@@ -150,9 +157,8 @@ function whenLabel(iso){
 const sortTips=t=>(t||[]).slice().sort((a,b)=>(a.position||0)-(b.position||0));
 const resClass=r=>r==="won"?"won":r==="lost"?"lost":"none";
 
-function stickyHTML(code){
-  return (code?`<div class="code"><div><small>Bet Slip Code:</small><b>${esc(code)}</b></div><button class="cp" data-copy="${esc(code)}" aria-label="Copy bet slip code">${ICON.copy}</button></div>`:"")+
-  `<a class="btn" style="background:var(--blue-dark)" href="${esc(CONFIG.AFFILIATE_LINK)}" target="_blank" rel="noopener noreferrer sponsored">Bet now on 1xBet<span class="sh"></span></a>
+function stickyHTML(){
+  return   `<a class="btn" style="background:var(--blue-dark)" href="${esc(CONFIG.AFFILIATE_LINK)}" target="_blank" rel="noopener noreferrer sponsored">Bet now on 1xBet<span class="sh"></span></a>
    <div class="promo"><span class="pc">promo code: <b>${esc(CONFIG.PROMO_CODE)}</b></span><button class="cp" data-copy="${esc(CONFIG.PROMO_CODE)}" aria-label="Copy promo code">${ICON.copy}</button><span class="hand" role="img" aria-label="Pointing at the promo code">&#128072;</span><span class="new">New users only,<br>T&amp;C apply</span></div>
    <div class="join"><a class="btn" style="background:var(--blue-dark)" href="${esc(CONFIG.TELEGRAM_LINK)}" target="_blank" rel="noopener noreferrer">${ICON.tg}join now<span class="sh" style="animation-delay:.4s"></span></a>
    <a class="btn" style="background:var(--green)" href="${esc(CONFIG.WHATSAPP_LINK)}" target="_blank" rel="noopener noreferrer">${ICON.wa}join now<span class="sh" style="animation-delay:.8s"></span></a></div>
@@ -178,6 +184,17 @@ async function loadSettings(){
 function renderVip(){const b=$("vipbox");if(b)b.innerHTML=vipHTML()}
 
 let lastSig="";
+function pagerIndex(){const pg=document.querySelector(".pager");return pg&&pg.clientWidth?Math.round(pg.scrollLeft/pg.clientWidth):0}
+function updateDots(){
+  const d=$("dots"),pg=document.querySelector(".pager");if(!d||!pg)return;
+  const n=pg.children.length,i=Math.min(pagerIndex(),n-1);
+  d.innerHTML=Array.from({length:n},(_,k)=>`<span class="dot${k===i?" on":""}"></span>`).join("")+`<span class="t">Tips ${i+1} of ${n}${i<n-1?" • swipe left for more":""}</span>`;
+}
+function slipPage(slip){
+  const tips=sortTips(slip.slip_tips);
+  return `<div class="pg">`+tips.map((t,i)=>`<div class="card"><div class="badge" style="background:${COLORS[i%COLORS.length]}">${esc((t.home_team||"?").trim().charAt(0).toUpperCase())}</div><div class="teams"><b>${esc(t.home_team)}</b><i>vs</i><b>${esc(t.away_team)}</b></div><div class="meta"><span class="pill">TIP: ${esc(t.tip)}</span><div class="when">${esc(whenLabel(t.kickoff))}${t.league?" • "+esc(t.league):""}</div></div></div>`).join("")+
+    `<div class="code"><div><small>Bet Slip Code:</small><b>${esc(slip.booking_code)}</b></div><button class="cp" data-copy="${esc(slip.booking_code)}" aria-label="Copy bet slip code">${ICON.copy}</button></div></div>`;
+}
 async function showTips(silent){
   view="tips";
   if(!silent){
@@ -185,20 +202,22 @@ async function showTips(silent){
     $("hdr").innerHTML=`<h1>Predict Today's Live</h1>`+tickerHTML()+tabsHTML();
     initTicker();
     $("main").innerHTML=`<div class="empty">Loading…</div>`;
-    $("sticky").innerHTML=stickyHTML(null);$("sticky").style.display="flex";
+    $("sticky").innerHTML=stickyHTML();$("sticky").style.display="flex";
   }
-  const{data,error}=await db.from("slips").select("*, slip_tips(*)").eq("is_active",true).order("created_at",{ascending:false}).limit(1);
+  const{data,error}=await db.from("slips").select("*, slip_tips(*)").eq("is_active",true).order("created_at",{ascending:true});
   if(view!=="tips")return;
   if(error){if(!silent)$("main").innerHTML=`<div class="err">Couldn't load tips. Check your connection and refresh.</div>`;return}
-  const slip=data&&data[0]||null;
-  const tips=slip?sortTips(slip.slip_tips):[];
-  const sig=JSON.stringify([slip&&slip.id,slip&&slip.booking_code,tips.map(t=>[t.id,t.home_team,t.away_team,t.tip,t.kickoff,t.league])]);
+  const slips=(data||[]).filter(s=>(s.slip_tips||[]).length);
+  const sig=JSON.stringify(slips.map(s=>[s.id,s.booking_code,sortTips(s.slip_tips).map(t=>[t.id,t.home_team,t.away_team,t.tip,t.kickoff,t.league])]));
   if(silent&&sig===lastSig)return;
-  lastSig=sig;activeSlip=slip;
-  if(!slip||!tips.length){$("main").innerHTML=`<div class="empty">No tips yet</div><div id="vipbox"></div>`;renderVip();$("sticky").innerHTML=stickyHTML(null);return}
-  $("main").innerHTML=tips.map((t,i)=>`<div class="card"><div class="badge" style="background:${COLORS[i%COLORS.length]}">${esc((t.home_team||"?").trim().charAt(0).toUpperCase())}</div><div class="teams"><b>${esc(t.home_team)}</b><i>vs</i><b>${esc(t.away_team)}</b></div><div class="meta"><span class="pill">TIP: ${esc(t.tip)}</span><div class="when">${esc(whenLabel(t.kickoff))}${t.league?" • "+esc(t.league):""}</div></div></div>`).join("")+`<div id="vipbox"></div>`;
-  renderVip();
-  $("sticky").innerHTML=stickyHTML(slip.booking_code);
+  lastSig=sig;
+  if(!slips.length){$("main").innerHTML=`<div class="empty">No tips yet</div><div id="vipbox"></div>`;renderVip();return}
+  const keep=document.querySelector(".pager")?pagerIndex():0;
+  $("main").innerHTML=`<div class="dots" id="dots"></div><div class="pager">${slips.map(slipPage).join("")}</div><div id="vipbox"></div>`;
+  const pg=document.querySelector(".pager");
+  pg.scrollLeft=Math.min(keep,slips.length-1)*pg.clientWidth;
+  pg.addEventListener("scroll",updateDots,{passive:true});
+  updateDots();renderVip();
 }
 
 let histSig="";
@@ -252,24 +271,4 @@ function goBack(){if(view==="detail"){history.back()}else{showTips()}}
 
 document.addEventListener("click",e=>{
   const cp=e.target.closest("[data-copy]");if(cp){copy(cp.dataset.copy);return}
-  const tab=e.target.closest("[data-tab]");if(tab){tab.dataset.tab==="tips"?showTips():showHistory();return}
-  const open=e.target.closest("[data-open]");if(open){showDetail(+open.dataset.open,true);return}
-  const go=e.target.closest("[data-go]");if(go){
-    if(view==="detail"){history.back()}else if(go.dataset.go==="tips"){showTips()}else{showHistory()}
-  }
-});
-window.addEventListener("popstate",()=>{if(view==="detail")showHistory()});
-
-db.channel("live").on("postgres_changes",{event:"*",schema:"public",table:"slips"},()=>{if(view==="tips")showTips(true);refreshHistory()})
-  .on("postgres_changes",{event:"*",schema:"public",table:"slip_tips"},()=>{if(view==="tips")showTips(true);refreshHistory()})
-  .on("postgres_changes",{event:"*",schema:"public",table:"site_settings"},()=>loadSettings()).subscribe();
-setInterval(()=>{if(document.hidden)return;if(view==="tips")showTips(true);if(view==="history")refreshHistory()},15000);
-document.addEventListener("visibilitychange",()=>{if(document.hidden)return;if(view==="tips")showTips(true);refreshHistory()});
-
-showTips();
-loadSettings();
-loadHistory();
-</script>
-</body>
-  </html>
-  
+  const tab=e.target.closest("[data-tab]");if(tab){t
