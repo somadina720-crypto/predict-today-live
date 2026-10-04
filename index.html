@@ -4,6 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Predict Today's Live</title>
+<script>
+window.addEventListener("error",function(e){
+  var b=document.body;if(!b)return;
+  var d=document.getElementById("diag");
+  if(!d){d=document.createElement("div");d.id="diag";d.style.cssText="position:fixed;left:8px;right:8px;top:8px;z-index:99;background:#7f1d1d;color:#fff;padding:10px 12px;border-radius:10px;font:12px/1.4 system-ui,sans-serif;word-break:break-word";b.appendChild(d)}
+  d.textContent="Page error: "+(e.message||"script failed to load")+(e.lineno?" (line "+e.lineno+")":"");
+});
+window.addEventListener("load",function(){
+  if(!window.supabase){var d=document.createElement("div");d.style.cssText="position:fixed;left:8px;right:8px;top:8px;z-index:99;background:#7f1d1d;color:#fff;padding:10px 12px;border-radius:10px;font:12px/1.4 system-ui,sans-serif";d.textContent="Couldn't load the data library. Check your internet and refresh.";document.body.appendChild(d)}
+});
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{--bg:#0b0d12;--card:#171a22;--line:#2a2f3a;--text:#fff;--muted:#9ca3af;--blue:#1d9bf0;--blue-dark:#0f7fd1;--green:#16a34a;--red:#dc2626;--gold:#f5c542}
@@ -271,4 +282,23 @@ function goBack(){if(view==="detail"){history.back()}else{showTips()}}
 
 document.addEventListener("click",e=>{
   const cp=e.target.closest("[data-copy]");if(cp){copy(cp.dataset.copy);return}
-  const tab=e.target.closest("[data-tab]");if(tab){t
+  const tab=e.target.closest("[data-tab]");if(tab){tab.dataset.tab==="tips"?showTips():showHistory();return}
+  const open=e.target.closest("[data-open]");if(open){showDetail(+open.dataset.open,true);return}
+  const go=e.target.closest("[data-go]");if(go){
+    if(view==="detail"){history.back()}else if(go.dataset.go==="tips"){showTips()}else{showHistory()}
+  }
+});
+window.addEventListener("popstate",()=>{if(view==="detail")showHistory()});
+
+db.channel("live").on("postgres_changes",{event:"*",schema:"public",table:"slips"},()=>{if(view==="tips")showTips(true);refreshHistory()})
+  .on("postgres_changes",{event:"*",schema:"public",table:"slip_tips"},()=>{if(view==="tips")showTips(true);refreshHistory()})
+  .on("postgres_changes",{event:"*",schema:"public",table:"site_settings"},()=>loadSettings()).subscribe();
+setInterval(()=>{if(document.hidden)return;if(view==="tips")showTips(true);if(view==="history")refreshHistory()},15000);
+document.addEventListener("visibilitychange",()=>{if(document.hidden)return;if(view==="tips")showTips(true);refreshHistory()});
+
+showTips();
+loadSettings();
+loadHistory();
+</script>
+</body>
+</html>
