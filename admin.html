@@ -58,8 +58,11 @@ input:focus,textarea:focus{outline:2px solid #1d9bf0;outline-offset:1px}
     <div class="errs" id="errs"></div>
     <button class="btn" id="clearForm">Clear Form</button>
     <button class="btn blue" id="publish">Publish Slip to Site</button>
-    <button class="btn red" id="clearSlip">Clear previous slip from dashboard</button>
-    <div class="hint" style="text-align:center">Clear Form only empties the fields above. Only the red button removes the live slip from users and saves it in History.</div>
+    <button class="btn red" id="clearSlip">Clear ALL live slips from dashboard</button>
+    <div class="hint" style="text-align:center">Each publish adds a new swipe page for users, in the order you publish. Clear Form only empties the fields above. The red button removes all live slips from users and saves them in History.</div>
+    <h2>Live slips</h2>
+    <div class="hint">These are showing on the users page now, in swipe order. Remove one to move just that slip to History.</div>
+    <div id="live"><div class="hint">Loading…</div></div>
     <h2>VIP settings</h2>
     <div class="hint">Users who tap "Get VIP tips" open a WhatsApp chat with this number. Leave the number empty to hide the VIP box.</div>
     <input type="text" id="vipNum" placeholder="WhatsApp number, e.g. 2348012345678" inputmode="tel" autocomplete="off">
@@ -111,10 +114,22 @@ $("file").addEventListener("change",e=>{
 function resetForm(){$("file").value="";$("preview").style.display="none";$("code").value="";$("tips").value="";refresh()}
 $("clearForm").onclick=()=>{if(confirm("Clear the file, booking code and slip text from this form? This does not touch the live slip."))resetForm()};
 
-async function activeSlip(){
-  const{data,error}=await db.from("slips").select("id,image_url").eq("is_active",true).limit(1);
-  if(error)throw error;return data&&data[0]||null;
+async function loadLive(){
+  const box=$("live");
+  const{data,error}=await db.from("slips").select("id,booking_code,slip_tips(id)").eq("is_active",true).order("created_at",{ascending:true});
+  if(error){box.innerHTML='<div class="msg">Couldn\'t load live slips. Refresh to try again.</div>';return}
+  if(!data.length){box.innerHTML='<div class="hint">No live slips right now.</div>';return}
+  box.innerHTML=data.map((s,i)=>`<div class="slip" style="margin-bottom:10px"><div class="h">${i+1}<span>${esc(s.booking_code)} • ${(s.slip_tips||[]).length} game${(s.slip_tips||[]).length===1?"":"s"}</span></div><button class="btn red" style="margin-top:8px;padding:11px" data-rm="${esc(s.id)}">Remove this slip</button></div>`).join("");
 }
+$("live").addEventListener("click",async e=>{
+  const rm=e.target.closest("[data-rm]");if(!rm)return;
+  if(!confirm("Remove this slip from users' Today's tips and move it to History?"))return;
+  rm.disabled=true;rm.textContent="Removing…";
+  try{
+    const r=await db.from("slips").update({is_active:false}).eq("id",rm.dataset.rm);if(r.error)throw r.error;
+    toast("Moved to history");loadLive();loadResults();
+  }catch(err){toast("Couldn't remove: "+(err.message||"try again"));rm.disabled=false;rm.textContent="Remove this slip"}
+});
 $("publish").onclick=async()=>{
   const code=$("code").value.trim(),{tips,errs}=refresh();
   if(!code)return toast("Enter the booking code");
@@ -122,7 +137,6 @@ $("publish").onclick=async()=>{
   if(!tips.length)return toast("Add at least one selection");
   const b=$("publish");b.disabled=true;b.textContent="Publishing…";
   try{
-    if(await activeSlip()){toast("Clear the previous slip first");return}
     let image_url=null;const f=$("file").files[0];
     if(f){
       const path=Date.now()+"-"+f.name.replace(/[^a-zA-Z0-9._-]/g,"_");
@@ -132,18 +146,18 @@ $("publish").onclick=async()=>{
     const s=await db.from("slips").insert({booking_code:code,image_url,is_active:true}).select().single();if(s.error)throw s.error;
     const t=await db.from("slip_tips").insert(tips.map(x=>({...x,slip_id:s.data.id})));
     if(t.error){await db.from("slips").delete().eq("id",s.data.id);throw t.error}
-    toast("Published");resetForm();
+    toast("Published");resetForm();loadLive();
   }catch(e){toast("Couldn't publish: "+(e.message||"try again"))}
   finally{b.disabled=false;b.textContent="Publish Slip to Site"}
 };
 $("clearSlip").onclick=async()=>{
   const b=$("clearSlip");b.disabled=true;
   try{
-    const s=await activeSlip();
-    if(!s){toast("No live slip to clear");return}
-    if(!confirm("Remove the live slip from users' Today's tips and move it to History?"))return;
-    const r=await db.from("slips").update({is_active:false}).eq("id",s.id);if(r.error)throw r.error;
-    toast("Moved to history");loadResults();
+    const{data,error}=await db.from("slips").select("id").eq("is_active",true);if(error)throw error;
+    if(!data.length){toast("No live slips to clear");return}
+    if(!confirm("Remove ALL "+data.length+" live slip"+(data.length===1?"":"s")+" from users' Today's tips and move them to History?"))return;
+    const r=await db.from("slips").update({is_active:false}).eq("is_active",true);if(r.error)throw r.error;
+    toast("Moved to history");loadLive();loadResults();
   }catch(e){toast("Couldn't clear: "+(e.message||"try again"))}
   finally{b.disabled=false}
 };
@@ -216,7 +230,7 @@ $("results").addEventListener("click",async e=>{
   finally{sv.disabled=false;sv.textContent="Save result"}
 });
 
-function showBoard(on){$("login").style.display=on?"none":"flex";$("board").style.display=on?"flex":"none";if(on){refresh();loadResults();loadVip()}}
+function showBoard(on){$("login").style.display=on?"none":"flex";$("board").style.display=on?"flex":"none";if(on){refresh();loadLive();loadResults();loadVip()}}
 $("loginBtn").onclick=async()=>{
   $("loginErr").textContent="";
   const{error}=await db.auth.signInWithPassword({email:$("em").value.trim(),password:$("pw").value});
